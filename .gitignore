@@ -1,0 +1,39 @@
+####################################
+# .NET / C#
+####################################
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+####################################
+# Visual Studio Code
+####################################
+.vscode/
+
+####################################
+# Logs
+####################################
+*.log
+
+####################################
+# Entity Framework Core
+####################################
+Migrations/*.cs
+!Migrations/*Initial*.cs
+
+####################################
+# Configuración sensible
+####################################
+appsettings.Development.json
+appsettings.Production.json
+appsettings.*.json
+
+####################################
+# Sistema Operativo
+####################################
+.DS_Store
+Thumbs.db
+
