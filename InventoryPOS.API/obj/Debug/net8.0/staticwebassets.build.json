@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "scovZjE9jnejvCOLMUCgzxh6vTW6X7eGQd64uNvBTfU=",
+  "Source": "InventoryPOS.API",
+  "BasePath": "_content/InventoryPOS.API",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}
