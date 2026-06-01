@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "TOXPjIMXUuQ=",
+  "dgSpecHash": "V63TDAgMurPeCj6dZM37150rBDlpF41Z/7iLLv43bh+yJg63kiSRVtPPhhPGJzLKZ1qjHIqMM1E7u121VPP3FQ==",
   "success": true,
-  "projectFilePath": "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.Domain\\InventoryPOS.Domain.csproj",
+  "projectFilePath": "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.Domain\\InventoryPOS.Domain.csproj",
   "expectedPackageFiles": [],
   "logs": []
 }

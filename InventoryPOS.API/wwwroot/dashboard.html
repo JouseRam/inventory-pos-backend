@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — InventoryPOS</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav id="sidebar"></nav>
+<div id="main">
+  <header id="topbar"></header>
+  <main class="content">
+    <!-- KPI row -->
+    <div class="kpi-grid" id="kpi-grid">
+      <div class="kpi-card"><div class="kpi-icon indigo"><i class="bi bi-currency-dollar"></i></div><div><div class="kpi-value" id="k-today">—</div><div class="kpi-label">Ventas hoy</div></div></div>
+      <div class="kpi-card"><div class="kpi-icon green"><i class="bi bi-calendar-week"></i></div><div><div class="kpi-value" id="k-week">—</div><div class="kpi-label">Últimos 7 días</div></div></div>
+      <div class="kpi-card"><div class="kpi-icon cyan"><i class="bi bi-calendar-month"></i></div><div><div class="kpi-value" id="k-month">—</div><div class="kpi-label">Este mes</div></div></div>
+      <div class="kpi-card"><div class="kpi-icon amber"><i class="bi bi-box-seam"></i></div><div><div class="kpi-value" id="k-products">—</div><div class="kpi-label">Productos activos</div></div></div>
+      <div class="kpi-card"><div class="kpi-icon red"><i class="bi bi-exclamation-triangle"></i></div><div><div class="kpi-value" id="k-lowstock">—</div><div class="kpi-label">Stock bajo</div></div></div>
+      <div class="kpi-card"><div class="kpi-icon green"><i class="bi bi-people"></i></div><div><div class="kpi-value" id="k-customers">—</div><div class="kpi-label">Clientes</div></div></div>
+    </div>
+
+    <!-- Charts + recent -->
+    <div class="chart-grid">
+      <div class="card">
+        <div class="card-header"><h2><i class="bi bi-bar-chart" style="color:var(--primary)"></i> Ventas últimos 30 días</h2></div>
+        <div class="card-body"><div class="chart-container"><canvas id="chart-sales" height="240"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h2><i class="bi bi-pie-chart" style="color:var(--success)"></i> Top productos</h2></div>
+        <div class="card-body"><div class="chart-container"><canvas id="chart-top" height="240"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- Tables row -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px" id="tables-row">
+      <div class="card">
+        <div class="card-header">
+          <h2><i class="bi bi-receipt" style="color:var(--primary)"></i> Ventas recientes</h2>
+          <a href="sales.html" class="btn btn-secondary btn-sm">Ver todas</a>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead><tr><th>Folio</th><th>Cliente</th><th>Total</th><th>Fecha</th></tr></thead>
+            <tbody id="recent-sales"><tr><td colspan="4" class="empty-state"><div class="spinner"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h2><i class="bi bi-exclamation-diamond" style="color:var(--warning)"></i> Stock bajo</h2>
+          <a href="products.html?lowStock=1" class="btn btn-secondary btn-sm">Ver todos</a>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead><tr><th>Producto</th><th>Stock</th><th>Mín</th></tr></thead>
+            <tbody id="low-stock-table"><tr><td colspan="3" class="empty-state"><div class="spinner"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>

@@ -1,36 +1,42 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.API\\InventoryPOS.API.csproj": {}
+    "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.API\\InventoryPOS.API.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.API\\InventoryPOS.API.csproj": {
+    "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.API\\InventoryPOS.API.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.API\\InventoryPOS.API.csproj",
+        "projectUniqueName": "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.API\\InventoryPOS.API.csproj",
         "projectName": "InventoryPOS.API",
-        "projectPath": "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.API\\InventoryPOS.API.csproj",
-        "packagesPath": "C:\\Users\\Lenovo\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.API\\obj\\",
+        "projectPath": "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.API\\InventoryPOS.API.csproj",
+        "packagesPath": "C:\\Users\\ERAMIREZ16\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.API\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "C:\\Users\\Lenovo\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\ERAMIREZ16\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.Application\\InventoryPOS.Application.csproj": {
-                "projectPath": "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.Application\\InventoryPOS.Application.csproj"
+              "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.Application\\InventoryPOS.Application.csproj": {
+                "projectPath": "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.Application\\InventoryPOS.Application.csproj"
               },
-              "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.Infrastructure\\InventoryPOS.Infrastructure.csproj": {
-                "projectPath": "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.Infrastructure\\InventoryPOS.Infrastructure.csproj"
+              "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.Infrastructure\\InventoryPOS.Infrastructure.csproj": {
+                "projectPath": "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.Infrastructure\\InventoryPOS.Infrastructure.csproj"
               }
             }
           }
@@ -39,73 +45,55 @@
           "warnAsError": [
             "NU1605"
           ]
-        },
-        "restoreAuditProperties": {
-          "enableAudit": "true",
-          "auditLevel": "low",
-          "auditMode": "direct"
         }
       },
       "frameworks": {
         "net8.0": {
           "targetAlias": "net8.0",
-          "dependencies": {
-            "Microsoft.AspNetCore.OpenApi": {
-              "target": "Package",
-              "version": "[8.0.24, )"
-            },
-            "Swashbuckle.AspNetCore": {
-              "target": "Package",
-              "version": "[6.6.2, )"
-            }
-          },
           "imports": [
             "net461",
             "net462",
             "net47",
             "net471",
             "net472",
-            "net48",
-            "net481"
+            "net48"
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "frameworkReferences": {
-            "Microsoft.AspNetCore.App": {
-              "privateAssets": "none"
-            },
-            "Microsoft.NETCore.App": {
-              "privateAssets": "all"
-            }
-          },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.418/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.416\\RuntimeIdentifierGraph.json"
         }
       }
     },
-    "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.Application\\InventoryPOS.Application.csproj": {
+    "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.Application\\InventoryPOS.Application.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.Application\\InventoryPOS.Application.csproj",
+        "projectUniqueName": "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.Application\\InventoryPOS.Application.csproj",
         "projectName": "InventoryPOS.Application",
-        "projectPath": "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.Application\\InventoryPOS.Application.csproj",
-        "packagesPath": "C:\\Users\\Lenovo\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.Application\\obj\\",
+        "projectPath": "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.Application\\InventoryPOS.Application.csproj",
+        "packagesPath": "C:\\Users\\ERAMIREZ16\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.Application\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "C:\\Users\\Lenovo\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\ERAMIREZ16\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.Domain\\InventoryPOS.Domain.csproj": {
-                "projectPath": "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.Domain\\InventoryPOS.Domain.csproj"
+              "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.Domain\\InventoryPOS.Domain.csproj": {
+                "projectPath": "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.Domain\\InventoryPOS.Domain.csproj"
               }
             }
           }
@@ -114,11 +102,6 @@
           "warnAsError": [
             "NU1605"
           ]
-        },
-        "restoreAuditProperties": {
-          "enableAudit": "true",
-          "auditLevel": "low",
-          "auditMode": "direct"
         }
       },
       "frameworks": {
@@ -130,36 +113,36 @@
             "net47",
             "net471",
             "net472",
-            "net48",
-            "net481"
+            "net48"
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "frameworkReferences": {
-            "Microsoft.NETCore.App": {
-              "privateAssets": "all"
-            }
-          },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.418/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.416\\RuntimeIdentifierGraph.json"
         }
       }
     },
-    "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.Domain\\InventoryPOS.Domain.csproj": {
+    "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.Domain\\InventoryPOS.Domain.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.Domain\\InventoryPOS.Domain.csproj",
+        "projectUniqueName": "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.Domain\\InventoryPOS.Domain.csproj",
         "projectName": "InventoryPOS.Domain",
-        "projectPath": "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.Domain\\InventoryPOS.Domain.csproj",
-        "packagesPath": "C:\\Users\\Lenovo\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.Domain\\obj\\",
+        "projectPath": "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.Domain\\InventoryPOS.Domain.csproj",
+        "packagesPath": "C:\\Users\\ERAMIREZ16\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.Domain\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "C:\\Users\\Lenovo\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\ERAMIREZ16\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -172,11 +155,6 @@
           "warnAsError": [
             "NU1605"
           ]
-        },
-        "restoreAuditProperties": {
-          "enableAudit": "true",
-          "auditLevel": "low",
-          "auditMode": "direct"
         }
       },
       "frameworks": {
@@ -188,44 +166,44 @@
             "net47",
             "net471",
             "net472",
-            "net48",
-            "net481"
+            "net48"
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "frameworkReferences": {
-            "Microsoft.NETCore.App": {
-              "privateAssets": "all"
-            }
-          },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.418/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.416\\RuntimeIdentifierGraph.json"
         }
       }
     },
-    "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.Infrastructure\\InventoryPOS.Infrastructure.csproj": {
+    "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.Infrastructure\\InventoryPOS.Infrastructure.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.Infrastructure\\InventoryPOS.Infrastructure.csproj",
+        "projectUniqueName": "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.Infrastructure\\InventoryPOS.Infrastructure.csproj",
         "projectName": "InventoryPOS.Infrastructure",
-        "projectPath": "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.Infrastructure\\InventoryPOS.Infrastructure.csproj",
-        "packagesPath": "C:\\Users\\Lenovo\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.Infrastructure\\obj\\",
+        "projectPath": "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.Infrastructure\\InventoryPOS.Infrastructure.csproj",
+        "packagesPath": "C:\\Users\\ERAMIREZ16\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.Infrastructure\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "C:\\Users\\Lenovo\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\ERAMIREZ16\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.Domain\\InventoryPOS.Domain.csproj": {
-                "projectPath": "C:\\Users\\Lenovo\\Desktop\\managment-inventory\\inventory-pos-backend\\InventoryPOS.Domain\\InventoryPOS.Domain.csproj"
+              "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.Domain\\InventoryPOS.Domain.csproj": {
+                "projectPath": "C:\\Users\\ERAMIREZ16\\inventory-pos-backend\\InventoryPOS.Domain\\InventoryPOS.Domain.csproj"
               }
             }
           }
@@ -234,49 +212,22 @@
           "warnAsError": [
             "NU1605"
           ]
-        },
-        "restoreAuditProperties": {
-          "enableAudit": "true",
-          "auditLevel": "low",
-          "auditMode": "direct"
         }
       },
       "frameworks": {
         "net8.0": {
           "targetAlias": "net8.0",
-          "dependencies": {
-            "Microsoft.EntityFrameworkCore": {
-              "target": "Package",
-              "version": "[8.0.0, )"
-            },
-            "Microsoft.EntityFrameworkCore.SqlServer": {
-              "target": "Package",
-              "version": "[8.0.0, )"
-            },
-            "Microsoft.EntityFrameworkCore.Tools": {
-              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
-              "suppressParent": "All",
-              "target": "Package",
-              "version": "[8.0.0, )"
-            }
-          },
           "imports": [
             "net461",
             "net462",
             "net47",
             "net471",
             "net472",
-            "net48",
-            "net481"
+            "net48"
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "frameworkReferences": {
-            "Microsoft.NETCore.App": {
-              "privateAssets": "all"
-            }
-          },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.418/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.416\\RuntimeIdentifierGraph.json"
         }
       }
     }

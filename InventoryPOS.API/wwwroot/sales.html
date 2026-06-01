@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ventas — InventoryPOS</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav id="sidebar"></nav>
+<div id="main">
+  <header id="topbar"></header>
+  <main class="content">
+    <div class="filters-bar">
+      <div class="search-wrap" style="flex:0 0 auto">
+        <label style="font-size:.8rem;margin-right:6px">Desde</label>
+        <input id="f-from" type="date" class="form-control" style="width:140px">
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <label style="font-size:.8rem">Hasta</label>
+        <input id="f-to" type="date" class="form-control" style="width:140px">
+      </div>
+      <select id="f-method" class="form-control" style="width:150px">
+        <option value="">Todos los métodos</option>
+        <option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option><option>Otro</option>
+      </select>
+      <button class="btn btn-secondary" onclick="loadSales()"><i class="bi bi-funnel"></i> Filtrar</button>
+      <a href="pos.html" class="btn btn-primary" style="margin-left:auto"><i class="bi bi-plus-lg"></i> Nueva venta</a>
+    </div>
+
+    <!-- KPI summary -->
+    <div class="kpi-grid" style="margin-bottom:16px">
+      <div class="kpi-card"><div class="kpi-icon indigo"><i class="bi bi-receipt"></i></div><div><div class="kpi-value" id="k-count">—</div><div class="kpi-label">Ventas</div></div></div>
+      <div class="kpi-card"><div class="kpi-icon green"><i class="bi bi-currency-dollar"></i></div><div><div class="kpi-value" id="k-total">—</div><div class="kpi-label">Total</div></div></div>
+      <div class="kpi-card"><div class="kpi-icon cyan"><i class="bi bi-calculator"></i></div><div><div class="kpi-value" id="k-avg">—</div><div class="kpi-label">Ticket promedio</div></div></div>
+    </div>
+
+    <div class="card">
+      <div class="table-responsive">
+        <table>
+          <thead><tr><th>Folio</th><th>Cliente</th><th>Método</th><th>Subtotal</th><th>Descuento</th><th>IVA</th><th>Total</th><th>Fecha</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="table-body"><tr><td colspan="10" class="empty-state"><div class="spinner"></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Detail modal -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="d-title">Detalle de venta</h3>
+      <button class="modal-close" onclick="closeDetail()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body" id="d-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeDetail()">Cerrar</button>
+      <button class="btn btn-danger" id="d-cancel-btn" style="display:none" onclick="cancelSale()"><i class="bi bi-x-circle"></i> Cancelar venta</button>
+    </div>
+  </div>
+</div>
+<div id="toast-container"></div>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script src="js/sales.js"></script>
+</body>
+</html>
