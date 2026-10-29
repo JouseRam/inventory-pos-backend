@@ -25,6 +25,8 @@ public interface IIdentityService
     /// <summary>Creates the first super admin and signs it in; refused once any user exists.</summary>
     Task<AuthResponseDto> SetupFirstAdminAsync(FirstAdminDto dto, CancellationToken ct = default);
     Task<ProfileDto> GetProfileAsync(string userId, CancellationToken ct = default);
+    /// <summary>Full name (or user name) to print on tickets; null when the user no longer exists.</summary>
+    Task<string?> GetDisplayNameAsync(string userId, CancellationToken ct = default);
     Task<IReadOnlyList<UserDto>> ListAsync(CancellationToken ct = default);
     Task<UserDto> CreateAsync(UserCreateDto dto, CancellationToken ct = default);
     Task<UserDto> UpdateAsync(string id, UserUpdateDto dto, CancellationToken ct = default);

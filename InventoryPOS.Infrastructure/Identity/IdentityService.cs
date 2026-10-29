@@ -62,6 +62,12 @@ public class IdentityService(UserManager<AppUser> users, ApplicationDbContext db
         return await BuildProfileAsync(user, ct);
     }
 
+    public async Task<string?> GetDisplayNameAsync(string userId, CancellationToken ct = default)
+    {
+        var user = await users.FindByIdAsync(userId);
+        return user == null ? null : string.IsNullOrWhiteSpace(user.FullName) ? user.UserName : user.FullName;
+    }
+
     public async Task<IReadOnlyList<UserDto>> ListAsync(CancellationToken ct = default)
     {
         var all = await users.Users.AsNoTracking().OrderBy(u => u.UserName).ToListAsync(ct);

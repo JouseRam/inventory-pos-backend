@@ -5,6 +5,8 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
 
   let cart = loadCart();          // [{ variant, qty }]
   let cashSession = null;
+  let printer = { enabled: false, autoPrint: false };
+  let lastSaleId = null;
   let searchTimer = null;
 
   // ── Cart persistence (per browser tab, survives a reload) ──
@@ -200,7 +202,7 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
     $('#pay-total').textContent = fmt.money(total);
     ['#pay-cash', '#pay-card', '#pay-transfer', '#pay-card-ref', '#pay-transfer-ref', '#pay-notes'].forEach(id => { $(id).value = ''; });
     $('#pay-body').hidden = false; $('#pay-done').hidden = true;
-    $('#pay-confirm').hidden = false; $('#pay-cancel').hidden = false; $('#pay-new').hidden = true;
+    $('#pay-confirm').hidden = false; $('#pay-cancel').hidden = false; $('#pay-new').hidden = true; $('#pay-print').hidden = true;
     $('#pay-error').hidden = true;
     renderQuick();
     renderPay();
@@ -239,6 +241,10 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
       const sale = await api.post('/sales', body);
       $('#done-folio').textContent = sale.folio;
       $('#done-change').textContent = fmt.money(sale.change);
+      lastSaleId = sale.id;
+      $('#pay-print').hidden = !printer.enabled;
+      $('#done-print').textContent = '';
+      if (printer.autoPrint) printTicket(false);
       $('#pay-body').hidden = true; $('#pay-done').hidden = false;
       $('#pay-confirm').hidden = true; $('#pay-cancel').hidden = true; $('#pay-new').hidden = false;
       $('#pay-new').focus();
@@ -253,6 +259,19 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
     }
   });
 
+  // ── Ticket printing: a failed print never undoes the sale ──
+  async function printTicket(reprint) {
+    if (!lastSaleId) return;
+    $('#done-print').textContent = 'Imprimiendo ticket…';
+    try {
+      await api.post(`/printing/sales/${lastSaleId}?reprint=${reprint}`);
+      $('#done-print').textContent = reprint ? 'Ticket reimpreso.' : 'Ticket impreso.';
+    } catch (err) {
+      $('#done-print').textContent = `No se imprimió: ${err.message}`;
+    }
+  }
+  $('#pay-print').addEventListener('click', () => printTicket(true));
+
   // ── Keyboard: F2 search, F9 pay ──
   document.addEventListener('keydown', e => {
     if (e.key === 'F2') { e.preventDefault(); $('#search').focus(); $('#search').select(); }
@@ -260,10 +279,12 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
   });
 
   // ── Initial data ──
-  const [settings, customers] = await Promise.all([
+  const [settings, customers, printerStatus] = await Promise.all([
     api.get('/settings').catch(() => []),
     api.get('/customers').catch(() => []),
+    api.get('/printing/status').catch(() => null),
   ]);
+  if (printerStatus) printer = printerStatus;
   const name = settings.find(s => s.key === 'BusinessName')?.value;
   if (name) $('#store-name').textContent = name;
   $('#customer').insertAdjacentHTML('beforeend', customers.map(c =>

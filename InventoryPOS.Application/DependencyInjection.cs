@@ -2,6 +2,7 @@ using FluentValidation;
 using InventoryPOS.Application.Features.CashRegister;
 using InventoryPOS.Application.Features.Catalog;
 using InventoryPOS.Application.Features.Inventory;
+using InventoryPOS.Application.Features.Printing;
 using InventoryPOS.Application.Features.Products;
 using InventoryPOS.Application.Features.Reports;
 using InventoryPOS.Application.Features.Sales;
@@ -28,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<CashSessionService>();
         services.AddScoped<SettingService>();
         services.AddScoped<ReportService>();
+        services.AddScoped<PrintingService>();
         return services;
     }
 }

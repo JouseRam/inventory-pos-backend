@@ -1,5 +1,6 @@
 using InventoryPOS.API.Authorization;
 using InventoryPOS.Application.Features.CashRegister;
+using InventoryPOS.Application.Features.Printing;
 using InventoryPOS.Application.Features.Sales;
 using InventoryPOS.Domain.Common;
 using InventoryPOS.Domain.Constants;
@@ -61,4 +62,41 @@ public class CashSessionsController(CashSessionService service) : ControllerBase
 
     [HttpPost("{id:int}/close")]
     public Task<CashSummaryDto> Close(int id, CashCloseDto dto, CancellationToken ct) => service.CloseAsync(id, dto, ct);
+}
+
+[ApiController]
+[Route("api/printing")]
+[RequireModule(PosModules.Settings)]
+public class PrintingController(PrintingService service) : ControllerBase
+{
+    /// <summary>Whether a receipt printer is configured and should print after each sale.</summary>
+    [HttpGet("status")]
+    [AnyUser]
+    public Task<PrinterStatusDto> Status(CancellationToken ct) => service.GetStatusAsync(ct);
+
+    [HttpGet("printers")]
+    public IReadOnlyList<string> Printers() => service.ListPrinters();
+
+    [HttpPost("sales/{id:int}")]
+    [RequireModule(PosModules.Sales)]
+    public async Task<IActionResult> PrintSale(int id, [FromQuery] bool reprint, CancellationToken ct)
+    {
+        await service.PrintSaleAsync(id, reprint, ct);
+        return NoContent();
+    }
+
+    [HttpPost("test")]
+    public async Task<IActionResult> Test(CancellationToken ct)
+    {
+        await service.PrintTestAsync(ct);
+        return NoContent();
+    }
+
+    [HttpPost("drawer")]
+    [RequireModule(PosModules.CashRegister)]
+    public async Task<IActionResult> OpenDrawer(CancellationToken ct)
+    {
+        await service.OpenDrawerAsync(ct);
+        return NoContent();
+    }
 }

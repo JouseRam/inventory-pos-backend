@@ -53,6 +53,14 @@ public class DbSeeder(ApplicationDbContext db, UserManager<AppUser> users, IConf
         EnsureSetting(SettingKeys.TaxRate, "IVA incluido en precios (%)", "number", "Ventas", "16");
         EnsureSetting(SettingKeys.TicketFooter, "Pie del ticket", "textarea", "Ventas", "¡Gracias por su compra!");
         EnsureSetting(SettingKeys.ExpirationWarningDays, "Avisar caducidad con anticipación (días)", "number", "Inventario", "60");
+        EnsureSetting(SettingKeys.PrinterMode, "Conexión de la impresora", "text", "Impresora", "none");
+        EnsureSetting(SettingKeys.PrinterName, "Impresora de Windows", "text", "Impresora", null);
+        EnsureSetting(SettingKeys.PrinterHost, "IP de la impresora de red", "text", "Impresora", null);
+        EnsureSetting(SettingKeys.PrinterPort, "Puerto de la impresora de red", "number", "Impresora", "9100");
+        EnsureSetting(SettingKeys.PrinterPaperWidth, "Ancho del papel (mm)", "number", "Impresora", "80");
+        EnsureSetting(SettingKeys.PrinterCodePage, "Página de códigos", "number", "Impresora", "858");
+        EnsureSetting(SettingKeys.PrinterAutoPrint, "Imprimir al cobrar", "bool", "Impresora", "true");
+        EnsureSetting(SettingKeys.PrinterOpenDrawerOnCash, "Abrir cajón en cobros con efectivo", "bool", "Impresora", "true");
     }
 
     private async Task SeedCategoriesAsync(CancellationToken ct)
@@ -75,16 +83,20 @@ public class DbSeeder(ApplicationDbContext db, UserManager<AppUser> users, IConf
         }
     }
 
-    /// <summary>Creates the first super admin from configuration (Seed:AdminUserName / Seed:AdminPassword) when no user exists.</summary>
+    /// <summary>
+    /// Creates the first super admin from configuration (Seed:AdminUserName / Seed:AdminPassword) when no user exists,
+    /// as used by development; installed registers create it from the setup screen instead.
+    /// </summary>
     private async Task SeedAdminAsync()
     {
         if (await users.Users.AnyAsync()) return;
 
         var userName = config["Seed:AdminUserName"] ?? "admin";
         var password = config["Seed:AdminPassword"];
+        // Without a configured password the first admin is created from the setup screen.
         if (string.IsNullOrWhiteSpace(password))
         {
-            logger.LogWarning("No users exist and Seed:AdminPassword is not configured; set it with 'dotnet user-secrets' to create the first admin.");
+            logger.LogInformation("No users yet; waiting for the first-run setup screen.");
             return;
         }
 

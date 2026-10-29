@@ -17,6 +17,14 @@ public static class SettingKeys
     public const string TaxRate = "TaxRate";
     public const string TicketFooter = "TicketFooter";
     public const string ExpirationWarningDays = "ExpirationWarningDays";
+    public const string PrinterMode = "PrinterMode";
+    public const string PrinterName = "PrinterName";
+    public const string PrinterHost = "PrinterHost";
+    public const string PrinterPort = "PrinterPort";
+    public const string PrinterPaperWidth = "PrinterPaperWidth";
+    public const string PrinterCodePage = "PrinterCodePage";
+    public const string PrinterAutoPrint = "PrinterAutoPrint";
+    public const string PrinterOpenDrawerOnCash = "PrinterOpenDrawerOnCash";
 }
 
 public class SettingService(IUnitOfWork uow)

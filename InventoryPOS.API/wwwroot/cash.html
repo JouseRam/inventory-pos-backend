@@ -4,9 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Caja · Matiz</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..750&family=IBM+Plex+Mono:wght@400;600&family=Instrument+Sans:wght@400..700&display=swap">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="vendor/fonts.css">
+  <link rel="stylesheet" href="vendor/icons/bootstrap-icons.min.css">
   <link rel="stylesheet" href="css/style.css">
   <style>
     .drawer { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr); gap: 20px; align-items: start; }
@@ -31,7 +30,7 @@
 
     <div class="drawer" id="session-view" hidden>
       <section class="panel">
-        <header><h2 id="s-title">Caja</h2><span class="pill good" id="s-status"><i class="bi bi-unlock"></i>Abierta</span></header>
+        <header><h2 id="s-title">Caja</h2><button class="btn ghost sm" type="button" id="drawer-btn" hidden><i class="bi bi-box-arrow-up"></i>Abrir cajón</button><span class="pill good" id="s-status"><i class="bi bi-unlock"></i>Abierta</span></header>
         <div class="ledger" id="ledger"></div>
         <header style="border-top:1px solid var(--line)"><h2>Entradas y retiros</h2></header>
         <div class="table-wrap"><table><thead><tr><th>Hora</th><th>Tipo</th><th>Motivo</th><th class="num">Monto</th></tr></thead><tbody id="movements"></tbody></table></div>
@@ -66,6 +65,11 @@
       const { api, session, fmt, esc, toast, fail, confirmBox, $ } = POS;
       const canEdit = session.can('CashRegister', true);
       let current = null;
+      const printer = await api.get('/printing/status').catch(() => ({ enabled: false }));
+      $('#drawer-btn').hidden = !printer.enabled || !canEdit;
+      $('#drawer-btn').addEventListener('click', async () => {
+        try { await api.post('/printing/drawer'); toast('Cajón abierto.'); } catch (err) { fail(err); }
+      });
 
       const diffPill = d => d == null ? '' : d === 0
         ? '<span class="pill good"><i class="bi bi-check2"></i>Cuadra</span>'

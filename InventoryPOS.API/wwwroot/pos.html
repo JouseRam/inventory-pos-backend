@@ -4,9 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Punto de venta · Matiz</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..750&family=IBM+Plex+Mono:wght@400;600&family=Instrument+Sans:wght@400..700&display=swap">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="vendor/fonts.css">
+  <link rel="stylesheet" href="vendor/icons/bootstrap-icons.min.css">
   <link rel="stylesheet" href="css/style.css">
   <style>
     .pos { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 400px); gap: 20px; align-items: start; }
@@ -145,10 +144,12 @@
           <div class="eyebrow">Venta <span id="done-folio" class="mono"></span> registrada</div>
           <div class="muted">Cambio a entregar</div>
           <div class="change" id="done-change"></div>
+          <div class="muted" id="done-print" style="font-size:.85rem"></div>
         </div>
         <footer>
           <button class="btn ghost" value="cancel" formnovalidate id="pay-cancel">Regresar</button>
           <button class="btn primary lg" value="pay" id="pay-confirm">Registrar venta</button>
+          <button class="btn" type="button" id="pay-print" hidden><i class="bi bi-printer"></i>Imprimir ticket</button>
           <button class="btn primary lg" value="new" id="pay-new" hidden>Nueva venta</button>
         </footer>
       </form>

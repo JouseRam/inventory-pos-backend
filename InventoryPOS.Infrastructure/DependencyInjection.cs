@@ -1,10 +1,12 @@
 using InventoryPOS.Application.Common;
+using InventoryPOS.Application.Features.Printing;
 using InventoryPOS.Application.Features.Reports;
 using InventoryPOS.Application.Features.Users;
 using InventoryPOS.Domain.Interfaces;
 using InventoryPOS.Infrastructure.Identity;
 using InventoryPOS.Infrastructure.Persistence;
 using InventoryPOS.Infrastructure.Persistence.Seed;
+using InventoryPOS.Infrastructure.Printing;
 using InventoryPOS.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -49,6 +51,7 @@ public static class DependencyInjection
         services.AddScoped<IReportQueries, ReportQueries>();
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IPermissionService, PermissionService>();
+        services.AddSingleton<ITicketPrinter, EscPosTicketPrinter>();
         services.AddScoped<DbSeeder>();
         services.AddScoped<DatabaseInitializer>();
         if (database.IsSqlite)

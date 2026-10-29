@@ -4,9 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Configuración · Matiz</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..750&family=IBM+Plex+Mono:wght@400;600&family=Instrument+Sans:wght@400..700&display=swap">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="vendor/fonts.css">
+  <link rel="stylesheet" href="vendor/icons/bootstrap-icons.min.css">
   <link rel="stylesheet" href="css/style.css">
   <style>
     .perm-table td, .perm-table th { text-align: center; }
@@ -17,10 +16,38 @@
   <main class="page" id="page">
     <div class="tabs" role="tablist">
       <button role="tab" aria-selected="true" data-tab="business">Negocio</button>
+      <button role="tab" aria-selected="false" data-tab="printer">Impresora y respaldos</button>
       <button role="tab" aria-selected="false" data-tab="users" id="users-tab" hidden>Usuarios y permisos</button>
     </div>
 
     <form data-panel="business" id="settings-form" style="display:grid;gap:20px"></form>
+
+    <section data-panel="printer" hidden style="display:grid;gap:20px">
+      <form class="panel" id="printer-form">
+        <header><h2>Impresora de tickets</h2><span id="printer-pill"></span></header>
+        <div class="body form-grid">
+          <label class="field"><span>Conexión</span><select id="p-mode">
+            <option value="none">Sin impresora</option><option value="windows">USB (impresora instalada en Windows)</option><option value="network">Red (IP y puerto)</option></select></label>
+          <label class="field p-windows"><span>Impresora</span><select id="p-name"></select></label>
+          <label class="field p-network"><span>IP de la impresora</span><input id="p-host" class="mono" placeholder="192.168.1.50" maxlength="100"></label>
+          <label class="field p-network"><span>Puerto</span><input id="p-port" type="number" min="1" max="65535" class="mono"></label>
+          <label class="field"><span>Ancho del papel</span><select id="p-width"><option value="80">80 mm (48 caracteres)</option><option value="58">58 mm (32 caracteres)</option></select></label>
+          <label class="field"><span>Acentos y ñ</span><select id="p-codepage"><option value="858">PC858 (recomendado)</option><option value="850">PC850</option><option value="0">Sin acentos</option></select></label>
+          <label class="check span-all"><input type="checkbox" id="p-auto"> Imprimir el ticket al cobrar</label>
+          <label class="check span-all"><input type="checkbox" id="p-drawer"> Abrir el cajón cuando el cobro incluye efectivo</label>
+        </div>
+        <div class="body toolbar" style="border-top:1px solid var(--line)">
+          <button class="btn primary" type="submit">Guardar</button>
+          <button class="btn" type="button" id="p-test"><i class="bi bi-printer"></i>Imprimir prueba</button>
+          <button class="btn" type="button" id="p-drawer-btn"><i class="bi bi-box-arrow-up"></i>Abrir cajón</button>
+          <span class="muted" id="p-msg" style="font-size:.88rem"></span>
+        </div>
+      </form>
+      <section class="panel">
+        <header><h2>Respaldos de la base de datos</h2><button class="btn" type="button" id="backup-btn"><i class="bi bi-cloud-arrow-down"></i>Respaldar ahora</button></header>
+        <div class="body" id="backup-info" style="display:grid;gap:10px"></div>
+      </section>
+    </section>
 
     <section data-panel="users" hidden style="display:grid;gap:12px">
       <div class="toolbar"><span class="grow muted">Cada usuario ve solo los módulos que le asignes. «Editar» incluye ver.</span>
@@ -57,7 +84,7 @@
 
       // ── Business settings, grouped as the seeder defines them ──
       async function loadSettings() {
-        const list = await api.get('/settings');
+        const list = (await api.get('/settings')).filter(s => s.group !== 'Impresora');
         const groups = [...new Set(list.map(s => s.group))];
         $('#settings-form').innerHTML = groups.map(g => `
           <section class="panel"><header><h2>${esc(g)}</h2></header><div class="body form-grid">
@@ -141,15 +168,77 @@
         } catch (ex) { err.textContent = ex.message; err.hidden = false; }
       });
 
+      // ── Printer and backups ──
+      const setVisibility = () => {
+        $$('.p-windows').forEach(el => { el.hidden = $('#p-mode').value !== 'windows'; });
+        $$('.p-network').forEach(el => { el.hidden = $('#p-mode').value !== 'network'; });
+      };
+      $('#p-mode').addEventListener('change', setVisibility);
+
+      async function loadPrinter() {
+        const [list, printers, status] = await Promise.all([api.get('/settings'), api.get('/printing/printers'), api.get('/printing/status')]);
+        const cfg = Object.fromEntries(list.filter(s => s.group === 'Impresora').map(s => [s.key, s.value]));
+        const name = cfg.PrinterName || '';
+        $('#p-name').innerHTML = (printers.includes(name) || !name ? '' : `<option>${esc(name)}</option>`)
+          + (printers.length ? printers.map(p => `<option ${p === name ? 'selected' : ''}>${esc(p)}</option>`).join('') : '<option value="">No hay impresoras instaladas</option>');
+        $('#p-mode').value = cfg.PrinterMode || 'none';
+        $('#p-host').value = cfg.PrinterHost || '';
+        $('#p-port').value = cfg.PrinterPort || '9100';
+        $('#p-width').value = cfg.PrinterPaperWidth || '80';
+        $('#p-codepage').value = cfg.PrinterCodePage || '858';
+        $('#p-auto').checked = cfg.PrinterAutoPrint !== 'false';
+        $('#p-drawer').checked = cfg.PrinterOpenDrawerOnCash !== 'false';
+        $('#printer-pill').innerHTML = status.enabled
+          ? `<span class="pill good"><i class="bi bi-printer"></i>${esc(status.target || '')}</span>` : '<span class="pill">Sin impresora</span>';
+        $$('#printer-form input, #printer-form select, #printer-form button').forEach(el => { el.disabled = !canEdit; });
+        setVisibility();
+        await loadBackups();
+      }
+
+      $('#printer-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        try {
+          await api.put('/settings', {
+            PrinterMode: $('#p-mode').value, PrinterName: $('#p-name').value || null, PrinterHost: $('#p-host').value.trim() || null,
+            PrinterPort: $('#p-port').value || '9100', PrinterPaperWidth: $('#p-width').value, PrinterCodePage: $('#p-codepage').value,
+            PrinterAutoPrint: String($('#p-auto').checked), PrinterOpenDrawerOnCash: String($('#p-drawer').checked),
+          });
+          toast('Impresora guardada.');
+          await loadPrinter();
+        } catch (err) { POS.fail(err); }
+      });
+      const runPrinter = async (path, done) => {
+        $('#p-msg').textContent = 'Enviando…';
+        try { await api.post(path); $('#p-msg').textContent = done; }
+        catch (err) { $('#p-msg').textContent = err.message; }
+      };
+      $('#p-test').addEventListener('click', () => runPrinter('/printing/test', 'Prueba enviada. Revisa que los acentos y las columnas salgan bien.'));
+      $('#p-drawer-btn').addEventListener('click', () => runPrinter('/printing/drawer', 'Pulso enviado al cajón.'));
+
+      async function loadBackups() {
+        const b = await api.get('/system/backups');
+        $('#backup-btn').hidden = !b.enabled || !canEdit;
+        $('#backup-info').innerHTML = !b.enabled
+          ? '<p class="muted" style="margin:0">Esta instalación usa SQL Server; los respaldos se hacen desde el servidor de base de datos.</p>'
+          : `<p class="muted" style="margin:0">Se respalda solo cada día y se guardan las últimas copias en <span class="mono">${esc(b.folder)}</span>. Copia esa carpeta a una USB o a la nube de vez en cuando.</p>
+             <div class="table-wrap"><table><thead><tr><th>Archivo</th><th>Fecha</th><th class="num">Tamaño</th></tr></thead><tbody>
+             ${b.files.length ? b.files.slice(0, 10).map(f => `<tr><td class="mono">${esc(f.name)}</td><td>${POS.fmt.dateTime(f.createdAt)}</td><td class="num">${(f.sizeBytes / 1048576).toFixed(1)} MB</td></tr>`).join('')
+               : '<tr><td colspan="3" class="empty">Aún no hay respaldos.</td></tr>'}</tbody></table></div>`;
+      }
+      $('#backup-btn').addEventListener('click', async () => {
+        try { await api.post('/system/backups'); toast('Respaldo creado.'); await loadBackups(); } catch (err) { POS.fail(err); }
+      });
+
       function show(tab) {
         $$('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
         $$('[data-panel]').forEach(p => { p.hidden = p.dataset.panel !== tab; });
         history.replaceState(null, '', '#' + tab);
-        (tab === 'users' ? loadUsers : loadSettings)().catch(POS.fail);
+        ({ users: loadUsers, printer: loadPrinter, business: loadSettings })[tab]().catch(POS.fail);
       }
       $('#users-tab').hidden = !isAdmin;
       $$('[data-tab]').forEach(b => b.addEventListener('click', () => show(b.dataset.tab)));
-      show(isAdmin && location.hash === '#users' ? 'users' : 'business');
+      const requested = location.hash.slice(1);
+      show(requested === 'users' && isAdmin ? 'users' : requested === 'printer' ? 'printer' : 'business');
     });
   </script>
 </body>
