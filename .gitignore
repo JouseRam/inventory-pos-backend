@@ -7,6 +7,7 @@ obj/
 *.suo
 *.userosscache
 *.sln.docstates
+.vs/
 
 ####################################
 # Visual Studio Code
@@ -19,17 +20,10 @@ obj/
 *.log
 
 ####################################
-# Entity Framework Core
-####################################
-Migrations/*.cs
-!Migrations/*Initial*.cs
-
-####################################
 # Configuración sensible
 ####################################
-appsettings.Development.json
 appsettings.Production.json
-appsettings.*.json
+appsettings.Local.json
 
 ####################################
 # Sistema Operativo
