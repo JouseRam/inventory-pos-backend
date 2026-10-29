@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reportes · Matiz</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..750&family=IBM+Plex+Mono:wght@400;600&family=Instrument+Sans:wght@400..700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <template id="page-actions">
+    <label class="field" style="flex-direction:row;align-items:center;gap:8px"><span>Periodo</span>
+      <select id="days"><option value="7">7 días</option><option value="30" selected>30 días</option><option value="90">90 días</option><option value="365">12 meses</option></select></label>
+  </template>
+  <main class="page" id="page">
+    <section class="stats" id="stats"></section>
+    <section class="panel">
+      <header><h2>Venta diaria</h2><span class="muted" id="range"></span></header>
+      <div class="body chart-box" id="trend"></div>
+    </section>
+    <section class="panel">
+      <header><h2>Formas de pago</h2></header>
+      <div class="body" id="mix"></div>
+    </section>
+    <div class="grid-2">
+      <section class="panel"><header><h2>Más vendidos</h2></header><div class="body" id="top"></div></section>
+      <section class="panel"><header><h2>Por marca</h2></header><div class="body" id="brand"></div></section>
+    </div>
+    <section class="panel"><header><h2>Por categoría</h2></header><div class="body" id="category"></div></section>
+  </main>
+  <script src="js/core.js"></script>
+  <script src="js/charts.js"></script>
+  <script>
+    POS.boot({ module: 'Reports', title: 'Reportes' }, async () => {
+      const { api, fmt, $ } = POS;
+
+      async function load() {
+        const days = Number($('#days').value);
+        const from = fmt.isoDay(new Date(Date.now() - (days - 1) * 864e5));
+        const [summary, byDay, top, brands, cats, methods] = await Promise.all([
+          api.get(`/reports/summary?from=${from}&to=${fmt.isoDay()}`),
+          api.get(`/reports/sales-by-day?days=${days}`),
+          api.get(`/reports/top-products?days=${days}&limit=10`),
+          api.get(`/reports/by-brand?days=${days}`),
+          api.get(`/reports/by-category?days=${days}`),
+          api.get(`/reports/payment-methods?days=${days}`),
+        ]);
+        const margin = summary.totalRevenue ? Math.round(summary.grossProfit / summary.totalRevenue * 100) : 0;
+        const stat = (l, v, h) => `<div class="panel stat"><div class="eyebrow">${l}</div><div class="value">${v}</div><div class="hint">${h}</div></div>`;
+        $('#stats').innerHTML = [
+          stat('Venta', fmt.money(summary.totalRevenue), `${summary.totalSales} tickets`),
+          stat('Ticket promedio', fmt.money(summary.averageTicket), 'por venta completada'),
+          stat('Utilidad bruta', fmt.money(summary.grossProfit), `${margin}% sobre venta, a costo de compra`),
+          stat('Descuentos', fmt.money(summary.totalDiscount), `IVA incluido ${fmt.money(summary.totalTax)}`),
+        ].join('');
+        $('#range').textContent = `${fmt.day(summary.from)} – ${fmt.day(summary.to)}`;
+        Charts.area($('#trend'), Charts.fillDays(byDay, days));
+        Charts.mix($('#mix'), methods);
+        Charts.bars($('#top'), top, { label: r => r.description, value: r => r.totalRevenue });
+        Charts.bars($('#brand'), brands, { label: r => r.name, value: r => r.totalRevenue });
+        Charts.bars($('#category'), cats, { label: r => r.name, value: r => r.totalRevenue });
+      }
+      $('#days').addEventListener('change', () => load().catch(POS.fail));
+      await load();
+    });
+  </script>
+</body>
+</html>

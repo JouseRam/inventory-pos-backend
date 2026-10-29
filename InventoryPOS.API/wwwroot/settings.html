@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Configuración · Matiz</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..750&family=IBM+Plex+Mono:wght@400;600&family=Instrument+Sans:wght@400..700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .perm-table td, .perm-table th { text-align: center; }
+    .perm-table td:first-child, .perm-table th:first-child { text-align: left; }
+  </style>
+</head>
+<body>
+  <main class="page" id="page">
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="business">Negocio</button>
+      <button role="tab" aria-selected="false" data-tab="users" id="users-tab" hidden>Usuarios y permisos</button>
+    </div>
+
+    <form data-panel="business" id="settings-form" style="display:grid;gap:20px"></form>
+
+    <section data-panel="users" hidden style="display:grid;gap:12px">
+      <div class="toolbar"><span class="grow muted">Cada usuario ve solo los módulos que le asignes. «Editar» incluye ver.</span>
+        <button class="btn primary" type="button" id="new-user"><i class="bi bi-person-plus"></i>Agregar usuario</button></div>
+      <section class="panel"><div class="table-wrap"><table>
+        <thead><tr><th>Usuario</th><th>Nombre</th><th>Acceso</th><th>Estado</th><th></th></tr></thead><tbody id="users"></tbody></table></div></section>
+    </section>
+
+    <dialog id="user-dialog" aria-labelledby="user-title" style="width:min(720px,calc(100vw - 32px))">
+      <form method="dialog">
+        <header><h2 id="user-title">Usuario</h2><button class="btn ghost icon-btn" value="cancel" formnovalidate aria-label="Cerrar"><i class="bi bi-x-lg"></i></button></header>
+        <div class="body">
+          <div class="form-grid">
+            <label class="field"><span>Usuario</span><input id="u-name" required maxlength="50" pattern="[a-zA-Z0-9._\-]+" class="mono" autocomplete="off"></label>
+            <label class="field"><span>Nombre completo</span><input id="u-full" required maxlength="150"></label>
+            <label class="field"><span>Correo</span><input id="u-email" type="email" maxlength="150"></label>
+            <label class="field"><span id="u-pass-label">Contraseña</span><input id="u-pass" type="password" minlength="8" autocomplete="new-password"></label>
+            <label class="check"><input type="checkbox" id="u-active" checked> Activo</label>
+            <label class="check"><input type="checkbox" id="u-super"> Administrador (acceso total y gestión de usuarios)</label>
+          </div>
+          <div class="table-wrap" id="perm-wrap"><table class="perm-table"><thead><tr><th>Módulo</th><th>Ver</th><th>Editar</th></tr></thead><tbody id="perms"></tbody></table></div>
+          <div class="form-error" hidden></div>
+        </div>
+        <footer><button class="btn ghost" value="cancel" formnovalidate>Cancelar</button><button class="btn primary" value="save">Guardar</button></footer>
+      </form>
+    </dialog>
+  </main>
+  <script src="js/core.js"></script>
+  <script>
+    POS.boot({ module: 'Settings', title: 'Configuración' }, async () => {
+      const { api, session, esc, toast, $, $$ } = POS;
+      const canEdit = session.can('Settings', true);
+      const isAdmin = session.profile.isSuperAdmin;
+
+      // ── Business settings, grouped as the seeder defines them ──
+      async function loadSettings() {
+        const list = await api.get('/settings');
+        const groups = [...new Set(list.map(s => s.group))];
+        $('#settings-form').innerHTML = groups.map(g => `
+          <section class="panel"><header><h2>${esc(g)}</h2></header><div class="body form-grid">
+            ${list.filter(s => s.group === g).map(s => `<label class="field ${s.type === 'textarea' ? 'span-all' : ''}"><span>${esc(s.label)}</span>
+              ${s.type === 'textarea' ? `<textarea name="${esc(s.key)}" rows="2" ${canEdit ? '' : 'disabled'}>${esc(s.value || '')}</textarea>`
+                : `<input name="${esc(s.key)}" value="${esc(s.value || '')}" ${s.type === 'number' ? 'type="number" step="any"' : ''} ${canEdit ? '' : 'disabled'}>`}</label>`).join('')}
+          </div></section>`).join('') + (canEdit ? '<div><button class="btn primary" type="submit">Guardar configuración</button></div>' : '');
+      }
+      $('#settings-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const values = {};
+        for (const el of e.target.elements) if (el.name) values[el.name] = el.value;
+        try { await api.put('/settings', values); toast('Configuración guardada.'); } catch (err) { POS.fail(err); }
+      });
+
+      // ── Users (super admin only) ──
+      let users = [], modules = [], editing = null;
+      async function loadUsers() {
+        [users, modules] = await Promise.all([api.get('/users'), api.get('/users/modules')]);
+        $('#users').innerHTML = users.map((u, i) => `
+          <tr class="${u.isActive ? '' : 'inactive'}"><td class="mono">${esc(u.userName)}</td><td>${esc(u.fullName)}</td>
+          <td>${u.isSuperAdmin ? '<span class="pill accent"><i class="bi bi-shield-check"></i>Administrador</span>'
+            : u.permissions.length ? u.permissions.map(p => `<span class="pill ${p.canEdit ? 'good' : ''}" style="margin:2px">${esc(modules.find(m => m.key === p.module)?.label || p.module)}${p.canEdit ? '' : ' · ver'}</span>`).join('')
+            : '<span class="muted">Sin módulos</span>'}</td>
+          <td>${u.isActive ? '<span class="pill good">Activo</span>' : '<span class="pill">Inactivo</span>'}</td>
+          <td class="num"><button class="btn ghost sm" type="button" data-edit="${i}">Editar</button></td></tr>`).join('');
+      }
+
+      const dlg = $('#user-dialog');
+      function renderPerms(perms) {
+        $('#perms').innerHTML = modules.map(m => {
+          const p = perms.find(x => x.module === m.key) || {};
+          return `<tr><td><i class="bi ${m.icon}"></i> ${esc(m.label)}</td>
+            <td><input type="checkbox" data-view="${m.key}" ${p.canView || p.canEdit ? 'checked' : ''} aria-label="Ver ${esc(m.label)}"></td>
+            <td><input type="checkbox" data-edit-perm="${m.key}" ${p.canEdit ? 'checked' : ''} aria-label="Editar ${esc(m.label)}"></td></tr>`;
+        }).join('');
+      }
+      $('#perms').addEventListener('change', e => {
+        const k = e.target.dataset.editPerm;
+        if (k && e.target.checked) $(`[data-view="${k}"]`).checked = true;
+        const v = e.target.dataset.view;
+        if (v && !e.target.checked) $(`[data-edit-perm="${v}"]`).checked = false;
+      });
+      $('#u-super').addEventListener('change', () => { $('#perm-wrap').hidden = $('#u-super').checked; });
+
+      function openUser(u) {
+        editing = u;
+        dlg.querySelector('form').reset();
+        dlg.querySelector('.form-error').hidden = true;
+        $('#user-title').textContent = u ? `Editar ${u.userName}` : 'Agregar usuario';
+        $('#u-name').value = u?.userName || ''; $('#u-name').disabled = !!u;
+        $('#u-full').value = u?.fullName || ''; $('#u-email').value = u?.email || '';
+        $('#u-active').checked = u ? u.isActive : true; $('#u-super').checked = !!u?.isSuperAdmin;
+        $('#u-pass').required = !u;
+        $('#u-pass-label').textContent = u ? 'Nueva contraseña (opcional)' : 'Contraseña (mínimo 8, con número)';
+        renderPerms(u?.permissions || []);
+        $('#perm-wrap').hidden = $('#u-super').checked;
+        dlg.showModal();
+      }
+      $('#new-user').addEventListener('click', () => openUser(null));
+      $('#users').addEventListener('click', e => { const b = e.target.closest('[data-edit]'); if (b) openUser(users[Number(b.dataset.edit)]); });
+
+      dlg.querySelector('form').addEventListener('submit', async e => {
+        e.preventDefault();
+        if (e.submitter?.value === 'cancel') { dlg.close(); return; }
+        const err = dlg.querySelector('.form-error');
+        const perms = modules.map(m => ({ module: m.key, canView: $(`[data-view="${m.key}"]`).checked, canEdit: $(`[data-edit-perm="${m.key}"]`).checked }))
+          .filter(p => p.canView || p.canEdit);
+        try {
+          if (editing) {
+            await api.put(`/users/${editing.id}`, { fullName: $('#u-full').value.trim(), email: $('#u-email').value.trim() || null,
+              isActive: $('#u-active').checked, isSuperAdmin: $('#u-super').checked, newPassword: $('#u-pass').value || null });
+            await api.put(`/users/${editing.id}/permissions`, perms);
+          } else {
+            await api.post('/users', { userName: $('#u-name').value.trim(), fullName: $('#u-full').value.trim(), email: $('#u-email').value.trim() || null,
+              password: $('#u-pass').value, isSuperAdmin: $('#u-super').checked, permissions: perms });
+          }
+          toast('Usuario guardado.');
+          dlg.close();
+          await loadUsers();
+        } catch (ex) { err.textContent = ex.message; err.hidden = false; }
+      });
+
+      function show(tab) {
+        $$('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
+        $$('[data-panel]').forEach(p => { p.hidden = p.dataset.panel !== tab; });
+        history.replaceState(null, '', '#' + tab);
+        (tab === 'users' ? loadUsers : loadSettings)().catch(POS.fail);
+      }
+      $('#users-tab').hidden = !isAdmin;
+      $$('[data-tab]').forEach(b => b.addEventListener('click', () => show(b.dataset.tab)));
+      show(isAdmin && location.hash === '#users' ? 'users' : 'business');
+    });
+  </script>
+</body>
+</html>

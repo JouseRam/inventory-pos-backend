@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Proveedores · Matiz</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..750&family=IBM+Plex+Mono:wght@400;600&family=Instrument+Sans:wght@400..700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="page" id="page"><div id="crud"></div></main>
+  <script src="js/core.js"></script>
+  <script src="js/crud.js"></script>
+  <script>
+    POS.boot({ module: 'Suppliers', title: 'Proveedores' }, async () => {
+      const { esc, session } = POS;
+      await crud({
+        mount: document.getElementById('crud'), endpoint: '/suppliers', noun: 'proveedor', canEdit: session.can('Suppliers', true),
+        search: 'Nombre o contacto', emptyText: 'Aún no hay proveedores registrados.',
+        columns: [
+          { label: 'Proveedor', cell: r => `<b>${esc(r.name)}</b>` },
+          { label: 'Contacto', cell: r => esc(r.contactName || '') },
+          { label: 'Teléfono', cell: r => `<span class="mono">${esc(r.phone || '')}</span>` },
+          { label: 'Correo', cell: r => esc(r.email || '') },
+        ],
+        fields: `
+          <label class="field span-all"><span>Nombre o razón social</span><input name="name" required maxlength="200"></label>
+          <label class="field"><span>Contacto</span><input name="contactName" maxlength="150"></label>
+          <label class="field"><span>Teléfono</span><input name="phone" maxlength="30" inputmode="tel"></label>
+          <label class="field"><span>Correo</span><input name="email" type="email" maxlength="150"></label>
+          <label class="field span-all"><span>Dirección</span><input name="address" maxlength="300"></label>`,
+        deleteText: r => `Desactivar a ${r.name}. Sus recepciones anteriores se conservan.`,
+      }).load();
+    });
+  </script>
+</body>
+</html>

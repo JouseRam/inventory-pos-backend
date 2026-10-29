@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recepciones · Matiz</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..750&family=IBM+Plex+Mono:wght@400;600&family=Instrument+Sans:wght@400..700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .rline { display: grid; grid-template-columns: minmax(200px, 2fr) 90px 110px 130px 150px 32px; gap: 8px; align-items: end; }
+    @media (max-width: 760px) { .rline { grid-template-columns: 1fr 1fr; } .rline > :first-child { grid-column: 1 / -1; } }
+  </style>
+</head>
+<body>
+  <template id="page-actions">
+    <button class="btn primary" id="new-btn" type="button"><i class="bi bi-box-arrow-in-down"></i>Recibir mercancía</button>
+  </template>
+  <main class="page" id="page">
+    <div class="toolbar">
+      <label class="field"><span>Desde</span><input type="date" id="from"></label>
+      <label class="field"><span>Hasta</span><input type="date" id="to"></label>
+      <label class="field"><span>Proveedor</span><select id="f-supplier"><option value="">Todos</option></select></label>
+    </div>
+    <section class="panel">
+      <div class="table-wrap"><table><thead><tr><th>Folio</th><th>Fecha</th><th>Proveedor</th><th>Factura</th><th class="num">Renglones</th><th class="num">Total</th></tr></thead><tbody id="list"></tbody></table></div>
+    </section>
+
+    <dialog id="receive-dialog" aria-labelledby="receive-title" style="width:min(980px,calc(100vw - 32px))">
+      <form method="dialog">
+        <header><h2 id="receive-title">Recibir mercancía</h2><button class="btn ghost icon-btn" value="cancel" formnovalidate aria-label="Cerrar"><i class="bi bi-x-lg"></i></button></header>
+        <div class="body">
+          <div class="form-grid">
+            <label class="field"><span>Proveedor</span><select id="r-supplier"><option value="">Sin proveedor</option></select></label>
+            <label class="field"><span>Factura o remisión</span><input id="r-invoice" maxlength="50" class="mono"></label>
+            <label class="field"><span>Notas</span><input id="r-notes" maxlength="500"></label>
+          </div>
+          <div style="display:grid;gap:10px" id="r-lines"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <button class="btn sm" type="button" id="r-add"><i class="bi bi-plus"></i>Agregar renglón</button>
+            <span>Total <b class="num" id="r-total" style="font-size:1.2rem">$0.00</b></span>
+          </div>
+          <div class="form-error" hidden></div>
+        </div>
+        <footer><button class="btn ghost" value="cancel" formnovalidate>Cancelar</button><button class="btn primary" value="save">Registrar recepción</button></footer>
+      </form>
+    </dialog>
+
+    <dialog id="detail-dialog" aria-labelledby="detail-title" style="width:min(820px,calc(100vw - 32px))">
+      <form method="dialog">
+        <header><h2 id="detail-title">Recepción</h2><button class="btn ghost icon-btn" value="cancel" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button></header>
+        <div class="body" id="detail-body"></div>
+      </form>
+    </dialog>
+  </main>
+  <script src="js/core.js"></script>
+  <script src="js/picker.js"></script>
+  <script>
+    POS.boot({ module: 'Purchases', title: 'Recepciones' }, async () => {
+      const { api, session, fmt, esc, toast, $, $$ } = POS;
+      if (!session.can('Purchases', true)) $('#new-btn').hidden = true;
+      const suppliers = session.can('Suppliers') ? await api.get('/suppliers') : [];
+      const opts = suppliers.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+      $('#f-supplier').insertAdjacentHTML('beforeend', opts);
+      $('#r-supplier').insertAdjacentHTML('beforeend', opts);
+
+      async function load() {
+        const qs = new URLSearchParams({ pageSize: 100 });
+        if ($('#from').value) qs.set('from', $('#from').value);
+        if ($('#to').value) qs.set('to', $('#to').value);
+        if ($('#f-supplier').value) qs.set('supplierId', $('#f-supplier').value);
+        const r = await api.get('/purchases?' + qs);
+        $('#list').innerHTML = r.data.length ? r.data.map(p => `
+          <tr class="clickable" data-id="${p.id}"><td class="mono">${esc(p.folio)}</td><td>${fmt.dateTime(p.createdAt)}</td>
+          <td>${esc(p.supplierName || '—')}</td><td class="mono">${esc(p.invoiceNumber || '')}</td>
+          <td class="num">${p.itemCount}</td><td class="num">${fmt.money(p.total)}</td></tr>`).join('')
+          : '<tr><td colspan="6" class="empty">No hay recepciones en el periodo. Registra la primera con «Recibir mercancía».</td></tr>';
+      }
+      ['#from', '#to', '#f-supplier'].forEach(id => $(id).addEventListener('change', load));
+
+      $('#list').addEventListener('click', async e => {
+        const row = e.target.closest('[data-id]');
+        if (!row) return;
+        const p = await api.get('/purchases/' + row.dataset.id);
+        $('#detail-title').innerHTML = `Recepción <span class="mono">${esc(p.folio)}</span>`;
+        $('#detail-body').innerHTML = `
+          <div class="muted">${fmt.dateTime(p.createdAt)} · ${esc(p.supplierName || 'Sin proveedor')}${p.invoiceNumber ? ' · Factura <span class="mono">' + esc(p.invoiceNumber) + '</span>' : ''}</div>
+          <div class="table-wrap"><table><thead><tr><th>Presentación</th><th>Lote</th><th>Caducidad</th><th class="num">Cant.</th><th class="num">Costo</th><th class="num">Importe</th></tr></thead><tbody>
+          ${p.items.map(i => `<tr><td>${esc(i.description)}</td><td class="mono">${esc(i.lotNumber || '')}</td><td>${fmt.day(i.expirationDate)}</td>
+            <td class="num">${fmt.qty(i.quantity)}</td><td class="num">${fmt.money(i.unitCost)}</td><td class="num">${fmt.money(i.subtotal)}</td></tr>`).join('')}
+          </tbody></table></div>
+          <div style="text-align:right">Total <b class="num">${fmt.money(p.total)}</b></div>
+          ${p.notes ? `<p class="muted" style="margin:0">${esc(p.notes)}</p>` : ''}`;
+        $('#detail-dialog').showModal();
+      });
+
+      // ── Receive form ──
+      const dlg = $('#receive-dialog');
+      function addLine() {
+        const row = document.createElement('div');
+        row.className = 'rline';
+        row.innerHTML = `
+          <label class="field"><span>Presentación</span><input class="r-variant" required placeholder="Busca por nombre, tono o SKU"></label>
+          <label class="field"><span>Cantidad</span><input class="r-qty" type="number" min="0.001" step="1" required></label>
+          <label class="field"><span>Costo unit.</span><input class="r-cost mono" type="number" min="0" step="0.01" required></label>
+          <label class="field"><span>Lote</span><input class="r-lot mono" maxlength="50"></label>
+          <label class="field"><span>Caducidad</span><input class="r-exp" type="date"></label>
+          <button class="btn ghost sm" type="button" aria-label="Quitar renglón"><i class="bi bi-x"></i></button>`;
+        row.querySelector('button').onclick = () => { if ($$('.rline', dlg).length > 1) { row.remove(); total(); } };
+        variantPicker(row.querySelector('.r-variant'), v => {
+          row.variant = v;
+          row.querySelector('.r-cost').value = v.cost || '';
+          total();
+          row.querySelector('.r-lot').required = v.tracksBatches;
+          row.querySelector('.r-lot').placeholder = v.tracksBatches ? 'Requerido' : 'Opcional';
+          row.querySelector('.r-qty').focus();
+        });
+        row.addEventListener('input', total);
+        $('#r-lines').appendChild(row);
+      }
+      function total() {
+        const t = $$('.rline', dlg).reduce((s, r) => s + (Number(r.querySelector('.r-qty').value) || 0) * (Number(r.querySelector('.r-cost').value) || 0), 0);
+        $('#r-total').textContent = fmt.money(t);
+      }
+      $('#r-add').addEventListener('click', addLine);
+      $('#new-btn').addEventListener('click', () => {
+        dlg.querySelector('form').reset();
+        dlg.querySelector('.form-error').hidden = true;
+        $('#r-lines').innerHTML = '';
+        addLine(); total();
+        dlg.showModal();
+      });
+
+      dlg.querySelector('form').addEventListener('submit', async e => {
+        e.preventDefault();
+        if (e.submitter?.value === 'cancel') { dlg.close(); return; }
+        const err = dlg.querySelector('.form-error');
+        const rows = $$('.rline', dlg);
+        if (rows.some(r => !r.variant)) { err.textContent = 'Elige cada presentación de la lista de resultados.'; err.hidden = false; return; }
+        try {
+          const p = await api.post('/purchases', {
+            supplierId: $('#r-supplier').value ? Number($('#r-supplier').value) : null,
+            invoiceNumber: $('#r-invoice').value.trim() || null,
+            notes: $('#r-notes').value.trim() || null,
+            items: rows.map(r => ({
+              variantId: r.variant.id,
+              quantity: Number(r.querySelector('.r-qty').value),
+              unitCost: Number(r.querySelector('.r-cost').value),
+              lotNumber: r.querySelector('.r-lot').value.trim() || null,
+              expirationDate: r.querySelector('.r-exp').value || null,
+            })),
+          });
+          toast(`Recepción ${p.folio} registrada.`);
+          dlg.close();
+          await load();
+        } catch (ex) { err.textContent = ex.message; err.hidden = false; }
+      });
+
+      await load();
+    });
+  </script>
+</body>
+</html>

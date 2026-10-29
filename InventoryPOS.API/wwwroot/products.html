@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Productos · Matiz</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..750&family=IBM+Plex+Mono:wght@400;600&family=Instrument+Sans:wght@400..700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .plist { display: grid; gap: 10px; }
+    .prod { padding: 14px 16px; display: grid; gap: 10px; }
+    .prod-head { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+    .prod-head h3 { font-size: 1.05rem; }
+    .prod-head .meta { color: var(--muted); font-size: .85rem; }
+    .prod-head .grow { flex: 1; }
+    .variants { display: flex; flex-wrap: wrap; gap: 8px; }
+    .vchip { display: inline-flex; gap: 8px; align-items: center; padding: 5px 10px 5px 5px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font: .82rem var(--font-body); color: var(--ink); cursor: pointer; }
+    .vchip:hover { border-color: var(--accent); }
+    .vchip.low { border-color: var(--warn); }
+    .vchip.off { opacity: .5; }
+    .vchip .shade-code { font-size: .85rem; }
+    .vrow { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); padding: 12px; border: 1px dashed var(--line); border-radius: var(--radius-sm); position: relative; }
+    .vrow .preview { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; font-size: .85rem; color: var(--muted); min-height: 24px; }
+    .vrow .remove { position: absolute; top: 6px; right: 6px; }
+  </style>
+</head>
+<body>
+  <template id="page-actions">
+    <button class="btn primary" id="new-product" type="button"><i class="bi bi-plus-lg"></i>Nuevo producto</button>
+  </template>
+  <main class="page" id="page">
+    <div class="toolbar">
+      <label class="field grow"><span>Buscar</span><input id="q" placeholder="Nombre, marca, tono o SKU" type="search"></label>
+      <label class="field"><span>Categoría</span><select id="f-category"><option value="">Todas</option></select></label>
+      <label class="field"><span>Marca</span><select id="f-brand"><option value="">Todas</option></select></label>
+      <label class="check"><input type="checkbox" id="f-low"> Solo por resurtir</label>
+      <label class="check"><input type="checkbox" id="f-inactive"> Incluir inactivos</label>
+    </div>
+    <div class="plist" id="list"></div>
+
+    <dialog id="product-dialog" aria-labelledby="product-title" style="width:min(860px,calc(100vw - 32px))">
+      <form method="dialog">
+        <header><h2 id="product-title">Nuevo producto</h2><button class="btn ghost icon-btn" value="cancel" formnovalidate aria-label="Cerrar"><i class="bi bi-x-lg"></i></button></header>
+        <div class="body">
+          <div class="form-grid">
+            <label class="field span-all"><span>Nombre del producto</span><input name="name" required maxlength="200" placeholder="Igora Royal, Shampoo matizador…"></label>
+            <label class="field"><span>Marca</span><select name="brandId" data-type="nullable-number" id="p-brand"><option value="">Sin marca</option></select></label>
+            <label class="field"><span>Categoría</span><select name="categoryId" data-type="nullable-number" id="p-category"><option value="">Sin categoría</option></select></label>
+            <label class="field"><span>Proveedor</span><select name="supplierId" data-type="nullable-number" id="p-supplier"><option value="">Sin proveedor</option></select></label>
+            <label class="field span-all"><span>Descripción</span><input name="description" maxlength="1000"></label>
+            <label class="check span-all"><input type="checkbox" name="tracksBatches" id="p-batches"> Controlar por lote y caducidad (tintes, oxidantes, químicos)</label>
+            <label class="check" id="p-active-wrap"><input type="checkbox" name="isActive"> Activo</label>
+          </div>
+          <div id="variant-section" style="display:grid;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px"><h3 style="flex:1">Presentaciones</h3><button class="btn sm" type="button" id="add-variant"><i class="bi bi-plus"></i>Agregar tono o tamaño</button></div>
+            <div id="variant-rows" style="display:grid;gap:10px"></div>
+          </div>
+          <div class="form-error" hidden></div>
+        </div>
+        <footer><button class="btn ghost" value="cancel" formnovalidate>Cancelar</button><button class="btn primary" value="save">Guardar</button></footer>
+      </form>
+    </dialog>
+
+    <dialog id="variant-dialog" aria-labelledby="variant-title">
+      <form method="dialog">
+        <header><h2 id="variant-title">Presentación</h2><button class="btn ghost icon-btn" value="cancel" formnovalidate aria-label="Cerrar"><i class="bi bi-x-lg"></i></button></header>
+        <div class="body"><div id="variant-edit"></div><div class="form-error" hidden></div></div>
+        <footer>
+          <button class="btn ghost danger" value="delete" formnovalidate id="variant-delete" style="margin-right:auto">Desactivar</button>
+          <button class="btn ghost" value="cancel" formnovalidate>Cancelar</button><button class="btn primary" value="save">Guardar</button>
+        </footer>
+      </form>
+    </dialog>
+  </main>
+  <script src="js/core.js"></script>
+  <script src="js/products.js"></script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Existencias · Matiz</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..750&family=IBM+Plex+Mono:wght@400;600&family=Instrument+Sans:wght@400..700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <template id="page-actions">
+    <button class="btn primary" id="adjust-btn" type="button"><i class="bi bi-arrow-left-right"></i>Ajustar existencia</button>
+  </template>
+  <main class="page" id="page">
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="low">Por resurtir</button>
+      <button role="tab" aria-selected="false" data-tab="expiring">Por caducar</button>
+      <button role="tab" aria-selected="false" data-tab="kardex">Kardex</button>
+    </div>
+
+    <section class="panel" data-panel="low">
+      <div class="table-wrap"><table><thead><tr><th>Presentación</th><th>SKU</th><th class="num">Existencia</th><th class="num">Mínimo</th><th></th></tr></thead><tbody id="low"></tbody></table></div>
+    </section>
+
+    <section class="panel" data-panel="expiring" hidden>
+      <header><h2>Lotes con caducidad próxima</h2>
+        <label class="field" style="flex-direction:row"><select id="exp-days"><option value="30">30 días</option><option value="60" selected>60 días</option><option value="90">90 días</option><option value="180">6 meses</option></select></label></header>
+      <div class="table-wrap"><table><thead><tr><th>Presentación</th><th>Lote</th><th>Caduca</th><th class="num">Piezas</th><th></th></tr></thead><tbody id="expiring"></tbody></table></div>
+    </section>
+
+    <section class="panel" data-panel="kardex" hidden>
+      <div class="body toolbar">
+        <label class="field grow"><span>Presentación</span><input id="k-variant" placeholder="Busca por nombre, tono o SKU (vacío = todas)"></label>
+        <label class="field"><span>Desde</span><input type="date" id="k-from"></label>
+        <label class="field"><span>Hasta</span><input type="date" id="k-to"></label>
+        <button class="btn ghost" type="button" id="k-clear">Limpiar</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Presentación</th><th>Movimiento</th><th>Lote</th><th>Referencia</th><th class="num">Cantidad</th><th class="num">Queda</th></tr></thead><tbody id="kardex"></tbody></table></div>
+      <div class="body" style="display:flex;gap:8px;justify-content:flex-end;align-items:center"><span class="muted" id="k-page"></span><button class="btn sm" id="k-prev" type="button">Anterior</button><button class="btn sm" id="k-next" type="button">Siguiente</button></div>
+    </section>
+
+    <dialog id="adjust-dialog" aria-labelledby="adjust-title">
+      <form method="dialog">
+        <header><h2 id="adjust-title">Ajustar existencia</h2><button class="btn ghost icon-btn" value="cancel" formnovalidate aria-label="Cerrar"><i class="bi bi-x-lg"></i></button></header>
+        <div class="body">
+          <label class="field"><span>Presentación</span><input id="a-variant" required placeholder="Busca por nombre, tono o SKU"></label>
+          <div id="a-info" class="muted" style="font-size:.88rem"></div>
+          <div class="form-grid">
+            <label class="field"><span>Tipo</span><select id="a-dir"><option value="1">Entrada (+)</option><option value="-1">Salida (−)</option></select></label>
+            <label class="field"><span>Cantidad</span><input id="a-qty" type="number" min="0.001" step="1" required></label>
+            <label class="field a-lot"><span>Lote</span><input id="a-lot" maxlength="50" class="mono" list="a-lots"><datalist id="a-lots"></datalist></label>
+            <label class="field a-lot a-in"><span>Caducidad</span><input id="a-exp" type="date"></label>
+          </div>
+          <label class="field"><span>Motivo</span><input id="a-reason" required maxlength="300" placeholder="Conteo físico, producto dañado, muestra para cabina…"></label>
+          <div class="form-error" hidden></div>
+        </div>
+        <footer><button class="btn ghost" value="cancel" formnovalidate>Cancelar</button><button class="btn primary" value="save">Registrar ajuste</button></footer>
+      </form>
+    </dialog>
+  </main>
+  <script src="js/core.js"></script>
+  <script src="js/picker.js"></script>
+  <script>
+    POS.boot({ module: 'Inventory', title: 'Existencias' }, async () => {
+      const { api, session, fmt, esc, shade, toast, $, $$ } = POS;
+      const canEdit = session.can('Inventory', true);
+      if (!canEdit) $('#adjust-btn').hidden = true;
+
+      // ── Tabs (remembered in the URL hash so links can open a tab) ──
+      function showTab(name) {
+        $$('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+        $$('[data-panel]').forEach(p => { p.hidden = p.dataset.panel !== name; });
+        history.replaceState(null, '', '#' + name);
+        ({ low: loadLow, expiring: loadExpiring, kardex: loadKardex })[name]();
+      }
+      $$('[data-tab]').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+
+      const adjustLink = v => canEdit ? `<button class="btn ghost sm" type="button" data-adjust='${esc(JSON.stringify({ id: v.id, name: v.name, lot: v.lot || '' }))}'>Ajustar</button>` : '';
+
+      async function loadLow() {
+        const list = await api.get('/variants/low-stock');
+        $('#low').innerHTML = list.length ? list.map(v => `
+          <tr><td><div style="display:flex;gap:10px;align-items:center">${shade.swatch(v.shadeCode, 'sm')}${esc(v.displayName)}</div></td>
+          <td class="mono">${esc(v.sku)}</td>
+          <td class="num">${v.stock <= 0 ? '<span class="pill crit"><i class="bi bi-x-circle"></i>Agotado</span>' : fmt.qty(v.stock)}</td>
+          <td class="num muted">${fmt.qty(v.minStock)}</td><td class="num">${adjustLink({ id: v.id, name: v.displayName })}</td></tr>`).join('')
+          : '<tr><td colspan="5" class="empty"><i class="bi bi-check2-circle"></i> Todas las presentaciones están sobre su mínimo.</td></tr>';
+      }
+
+      async function loadExpiring() {
+        const list = await api.get('/inventory/expiring?days=' + $('#exp-days').value);
+        $('#expiring').innerHTML = list.length ? list.map(b => `
+          <tr><td>${esc(b.description)}</td><td class="mono">${esc(b.lotNumber)}</td>
+          <td>${b.daysToExpire < 0 ? '<span class="pill crit"><i class="bi bi-x-octagon"></i>Caducado</span>'
+            : `<span class="pill ${b.daysToExpire <= 30 ? 'warn' : ''}">${fmt.day(b.expirationDate)} · faltan ${b.daysToExpire} d</span>`}</td>
+          <td class="num">${fmt.qty(b.quantity)}</td><td class="num">${adjustLink({ id: b.variantId, name: b.description, lot: b.lotNumber })}</td></tr>`).join('')
+          : '<tr><td colspan="5" class="empty"><i class="bi bi-check2-circle"></i> Ningún lote caduca en este periodo.</td></tr>';
+      }
+      $('#exp-days').addEventListener('change', loadExpiring);
+
+      // ── Kardex ──
+      let kVariant = null, kPage = 1, kTotal = 0;
+      variantPicker($('#k-variant'), v => { kVariant = v.id; kPage = 1; loadKardex(); });
+      $('#k-clear').addEventListener('click', () => { kVariant = null; $('#k-variant').value = ''; $('#k-from').value = ''; $('#k-to').value = ''; kPage = 1; loadKardex(); });
+      ['#k-from', '#k-to'].forEach(id => $(id).addEventListener('change', () => { kPage = 1; loadKardex(); }));
+      $('#k-prev').addEventListener('click', () => { if (kPage > 1) { kPage--; loadKardex(); } });
+      $('#k-next').addEventListener('click', () => { if (kPage * 50 < kTotal) { kPage++; loadKardex(); } });
+      async function loadKardex() {
+        const qs = new URLSearchParams({ page: kPage, pageSize: 50 });
+        if (kVariant) qs.set('variantId', kVariant);
+        if ($('#k-from').value) qs.set('from', $('#k-from').value);
+        if ($('#k-to').value) qs.set('to', $('#k-to').value);
+        const r = await api.get('/inventory/movements?' + qs);
+        kTotal = r.total;
+        $('#k-page').textContent = r.total ? `${(kPage - 1) * 50 + 1}–${Math.min(kPage * 50, r.total)} de ${r.total}` : '';
+        $('#kardex').innerHTML = r.data.length ? r.data.map(m => `
+          <tr><td>${fmt.dateTime(m.createdAt)}</td><td>${esc(m.description)}</td>
+          <td><span class="pill ${m.quantity > 0 ? 'good' : ''}">${esc(m.type)}</span>${m.notes ? `<div class="muted" style="font-size:.8rem">${esc(m.notes)}</div>` : ''}</td>
+          <td class="mono">${esc(m.lotNumber || '')}</td><td class="mono">${esc(m.reference || '')}</td>
+          <td class="num" style="color:${m.quantity > 0 ? 'var(--good)' : 'var(--ink)'}">${m.quantity > 0 ? '+' : ''}${fmt.qty(m.quantity)}</td>
+          <td class="num">${fmt.qty(m.stockAfter)}</td></tr>`).join('')
+          : '<tr><td colspan="7" class="empty">Sin movimientos con estos filtros.</td></tr>';
+      }
+
+      // ── Adjustment ──
+      const dlg = $('#adjust-dialog');
+      let aVariant = null;
+      async function pickForAdjust(v) {
+        aVariant = v;
+        $('#a-info').innerHTML = `Existencia actual: <b>${fmt.qty(v.stock ?? 0)}</b>${v.tracksBatches ? ' · se controla por lote' : ''}`;
+        $$('.a-lot', dlg).forEach(el => { el.hidden = !v.tracksBatches; });
+        $('#a-lots').innerHTML = '';
+        if (v.tracksBatches) {
+          const lots = await api.get('/inventory/batches/' + v.id);
+          $('#a-lots').innerHTML = lots.map(b => `<option value="${esc(b.lotNumber)}">${fmt.qty(b.quantity)} pzas${b.expirationDate ? ' · cad. ' + fmt.day(b.expirationDate) : ''}</option>`).join('');
+        }
+      }
+      variantPicker($('#a-variant'), pickForAdjust);
+      $('#a-dir').addEventListener('change', () => { $$('.a-in', dlg).forEach(el => { el.hidden = $('#a-dir').value !== '1' || !aVariant?.tracksBatches; }); });
+
+      async function openAdjust(preset) {
+        dlg.querySelector('form').reset();
+        dlg.querySelector('.form-error').hidden = true;
+        aVariant = null; $('#a-info').textContent = '';
+        $$('.a-lot', dlg).forEach(el => { el.hidden = true; });
+        dlg.showModal();
+        if (preset) {
+          const results = await api.get('/variants/search?q=' + encodeURIComponent(preset.name.split(' - ')[0]));
+          const v = results.find(x => x.id === preset.id);
+          if (v) { $('#a-variant').value = v.displayName; await pickForAdjust(v); }
+          if (preset.lot) { $('#a-lot').value = preset.lot; $('#a-dir').value = '-1'; }
+          $('#a-qty').focus();
+        }
+      }
+      $('#adjust-btn').addEventListener('click', () => openAdjust());
+      document.addEventListener('click', e => {
+        const b = e.target.closest('[data-adjust]');
+        if (b) openAdjust(JSON.parse(b.dataset.adjust));
+      });
+
+      dlg.querySelector('form').addEventListener('submit', async e => {
+        e.preventDefault();
+        if (e.submitter?.value === 'cancel') { dlg.close(); return; }
+        const err = dlg.querySelector('.form-error');
+        if (!aVariant) { err.textContent = 'Elige la presentación de la lista.'; err.hidden = false; return; }
+        try {
+          await api.post('/inventory/adjustments', {
+            variantId: aVariant.id,
+            quantity: Number($('#a-qty').value) * Number($('#a-dir').value),
+            reason: $('#a-reason').value.trim(),
+            lotNumber: $('#a-lot').value.trim() || null,
+            expirationDate: $('#a-exp').value || null,
+          });
+          toast('Ajuste registrado.');
+          dlg.close();
+          showTab(location.hash.slice(1) || 'low');
+        } catch (ex) { err.textContent = ex.message; err.hidden = false; }
+      });
+
+      showTab(['low', 'expiring', 'kardex'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'low');
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Caja · Matiz</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..750&family=IBM+Plex+Mono:wght@400;600&family=Instrument+Sans:wght@400..700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .drawer { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr); gap: 20px; align-items: start; }
+    .ledger { display: grid; font-family: var(--font-mono); font-size: .92rem; }
+    .ledger div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 16px; border-bottom: 1px dashed var(--line); }
+    .ledger .sum { font: 650 1.6rem var(--font-display); border-bottom: 0; padding-top: 14px; align-items: baseline; }
+    .ledger .sum small { font: 600 .75rem var(--font-body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+    .diff { font: 650 1.4rem var(--font-display); font-variant-numeric: tabular-nums; }
+    @media (max-width: 900px) { .drawer { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="page" id="page">
+    <section class="panel" id="open-panel" hidden>
+      <header><h2>Abrir caja</h2></header>
+      <form class="body form-grid" id="open-form">
+        <label class="field"><span>Fondo inicial en efectivo</span><input id="open-amount" type="number" min="0" step="0.01" required class="mono"></label>
+        <label class="field"><span>Notas</span><input id="open-notes" maxlength="500" placeholder="Opcional"></label>
+        <div class="field" style="align-content:end"><button class="btn primary" type="submit">Abrir caja</button></div>
+      </form>
+    </section>
+
+    <div class="drawer" id="session-view" hidden>
+      <section class="panel">
+        <header><h2 id="s-title">Caja</h2><span class="pill good" id="s-status"><i class="bi bi-unlock"></i>Abierta</span></header>
+        <div class="ledger" id="ledger"></div>
+        <header style="border-top:1px solid var(--line)"><h2>Entradas y retiros</h2></header>
+        <div class="table-wrap"><table><thead><tr><th>Hora</th><th>Tipo</th><th>Motivo</th><th class="num">Monto</th></tr></thead><tbody id="movements"></tbody></table></div>
+        <form class="body toolbar" id="move-form" style="border-top:1px solid var(--line)">
+          <label class="field"><span>Tipo</span><select id="move-type"><option>Retiro</option><option>Ingreso</option></select></label>
+          <label class="field"><span>Monto</span><input id="move-amount" type="number" min="0.01" step="0.01" required class="mono" style="width:120px"></label>
+          <label class="field grow"><span>Motivo</span><input id="move-reason" required maxlength="300" placeholder="Pago a proveedor, cambio…"></label>
+          <button class="btn" type="submit">Registrar</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <header><h2>Corte de caja</h2></header>
+        <form class="body" id="close-form" style="display:grid;gap:14px">
+          <label class="field"><span>Efectivo contado en el cajón</span><input id="counted" type="number" min="0" step="0.01" required class="mono" style="font-size:1.2rem"></label>
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="muted">Diferencia</span><span class="diff" id="diff">—</span></div>
+          <p class="muted" style="margin:0;font-size:.85rem" id="diff-note">Cuenta billetes y monedas; la diferencia se calcula contra lo esperado.</p>
+          <label class="field"><span>Notas del corte</span><input id="close-notes" maxlength="500"></label>
+          <button class="btn primary lg" type="submit">Cerrar caja</button>
+        </form>
+      </section>
+    </div>
+
+    <section class="panel">
+      <header><h2>Cortes anteriores</h2></header>
+      <div class="table-wrap"><table><thead><tr><th>Folio</th><th>Apertura</th><th>Cierre</th><th class="num">Esperado</th><th class="num">Contado</th><th class="num">Diferencia</th></tr></thead><tbody id="history"></tbody></table></div>
+    </section>
+  </main>
+  <script src="js/core.js"></script>
+  <script>
+    POS.boot({ module: 'CashRegister', title: 'Caja' }, async () => {
+      const { api, session, fmt, esc, toast, fail, confirmBox, $ } = POS;
+      const canEdit = session.can('CashRegister', true);
+      let current = null;
+
+      const diffPill = d => d == null ? '' : d === 0
+        ? '<span class="pill good"><i class="bi bi-check2"></i>Cuadra</span>'
+        : `<span class="pill ${d < 0 ? 'crit' : 'warn'}"><i class="bi ${d < 0 ? 'bi-arrow-down' : 'bi-arrow-up'}"></i>${d < 0 ? 'Faltan' : 'Sobran'} ${fmt.money(Math.abs(d))}</span>`;
+
+      function renderSession(s) {
+        current = s;
+        $('#open-panel').hidden = !!s || !canEdit;
+        $('#session-view').hidden = !s;
+        if (!s) return;
+        $('#s-title').innerHTML = `Caja <span class="mono">${esc(s.folio)}</span> <span class="muted" style="font:400 .85rem var(--font-body)">desde ${fmt.dateTime(s.openedAt)}</span>`;
+        const row = (label, value, sign = '') => `<div><span>${label}</span><span>${sign}${fmt.money(value)}</span></div>`;
+        $('#ledger').innerHTML = [
+          row('Fondo inicial', s.openingAmount),
+          row(`Ventas en efectivo (${s.salesCount} ventas)`, s.cashSales, '+ '),
+          row('Ingresos', s.cashIn, '+ '),
+          row('Retiros', s.cashOut, '− '),
+          `<div class="sum"><small>Debe haber en caja</small><span>${fmt.money(s.expectedCash)}</span></div>`,
+          `<div class="muted"><span>Tarjeta (no entra al cajón)</span><span>${fmt.money(s.cardSales)}</span></div>`,
+          `<div class="muted"><span>Transferencia</span><span>${fmt.money(s.transferSales)}</span></div>`,
+          `<div><span><b>Total vendido</b></span><span><b>${fmt.money(s.totalSales)}</b></span></div>`,
+        ].join('');
+        $('#movements').innerHTML = s.movements.length ? s.movements.map(m => `
+          <tr><td>${fmt.time(m.createdAt)}</td><td><span class="pill ${m.type === 'Retiro' ? 'warn' : 'good'}">${esc(m.type)}</span></td>
+          <td>${esc(m.reason)}</td><td class="num">${m.type === 'Retiro' ? '− ' : '+ '}${fmt.money(m.amount)}</td></tr>`).join('')
+          : '<tr><td colspan="4" class="empty">Sin entradas ni retiros en este turno.</td></tr>';
+        $('#move-form').hidden = !canEdit;
+        $('#close-form').hidden = !canEdit;
+        updateDiff();
+      }
+
+      function updateDiff() {
+        const v = $('#counted').value;
+        if (!current || v === '') { $('#diff').textContent = '—'; $('#diff').style.color = ''; return; }
+        const d = Math.round((Number(v) - current.expectedCash) * 100) / 100;
+        $('#diff').textContent = (d > 0 ? '+' : '') + fmt.money(d);
+        $('#diff').style.color = d === 0 ? 'var(--good)' : d < 0 ? 'var(--crit)' : 'var(--warn)';
+      }
+      $('#counted').addEventListener('input', updateDiff);
+
+      async function load() {
+        renderSession(await api.get('/cash-sessions/current'));
+        POS.refreshCashChip();
+        const h = await api.get('/cash-sessions?pageSize=30');
+        $('#history').innerHTML = h.data.length ? h.data.map(s => `
+          <tr class="${s.status === 'Abierta' ? '' : ''}"><td class="mono">${esc(s.folio)}</td><td>${fmt.dateTime(s.openedAt)}</td>
+          <td>${s.closedAt ? fmt.dateTime(s.closedAt) : '<span class="pill good"><i class="bi bi-unlock"></i>Abierta</span>'}</td>
+          <td class="num">${s.expectedCash == null ? '' : fmt.money(s.expectedCash)}</td>
+          <td class="num">${s.countedCash == null ? '' : fmt.money(s.countedCash)}</td><td class="num">${diffPill(s.difference)}</td></tr>`).join('')
+          : '<tr><td colspan="6" class="empty">Todavía no hay cortes registrados.</td></tr>';
+      }
+
+      $('#open-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        try {
+          await api.post('/cash-sessions/open', { openingAmount: Number($('#open-amount').value), notes: $('#open-notes').value.trim() || null });
+          toast('Caja abierta.');
+          await load();
+        } catch (err) { fail(err); }
+      });
+
+      $('#move-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        try {
+          renderSession(await api.post(`/cash-sessions/${current.id}/movements`,
+            { type: $('#move-type').value, amount: Number($('#move-amount').value), reason: $('#move-reason').value.trim() }));
+          e.target.reset();
+          toast('Movimiento registrado.');
+        } catch (err) { fail(err); }
+      });
+
+      $('#close-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const counted = Number($('#counted').value);
+        const d = Math.round((counted - current.expectedCash) * 100) / 100;
+        const msg = d === 0 ? `Cerrar la caja ${current.folio} con ${fmt.money(counted)}. El corte cuadra.`
+          : `Cerrar la caja ${current.folio} con ${fmt.money(counted)}. ${d < 0 ? 'Faltan' : 'Sobran'} ${fmt.money(Math.abs(d))}. Después del cierre ya no se pueden cancelar sus ventas.`;
+        if (!await confirmBox(msg, { okText: 'Cerrar caja' })) return;
+        try {
+          await api.post(`/cash-sessions/${current.id}/close`, { countedCash: counted, notes: $('#close-notes').value.trim() || null });
+          toast('Caja cerrada.');
+          e.target.reset();
+          await load();
+        } catch (err) { fail(err); }
+      });
+
+      await load();
+    });
+  </script>
+</body>
+</html>

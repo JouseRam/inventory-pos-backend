@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Resumen del día · Matiz</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..750&family=IBM+Plex+Mono:wght@400;600&family=Instrument+Sans:wght@400..700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <template id="page-actions">
+    <a class="btn primary" href="pos.html"><i class="bi bi-upc-scan"></i>Ir a vender</a>
+  </template>
+  <main class="page" id="page">
+    <section class="stats" id="stats"></section>
+
+    <section class="panel" id="trend-panel" hidden>
+      <header><h2>Ventas de los últimos 14 días</h2><span class="muted" id="trend-total"></span></header>
+      <div class="body chart-box" id="trend"></div>
+    </section>
+
+    <div class="grid-2">
+      <section class="panel">
+        <header><h2>Por resurtir</h2><a class="btn ghost sm" href="inventory.html">Existencias</a></header>
+        <div class="table-wrap"><table><thead><tr><th>Producto</th><th class="num">Hay</th><th class="num">Mínimo</th></tr></thead><tbody id="low"></tbody></table></div>
+      </section>
+      <section class="panel">
+        <header><h2>Lotes por caducar</h2><span class="muted" id="exp-window"></span></header>
+        <div class="table-wrap"><table><thead><tr><th>Producto</th><th>Lote</th><th>Caduca</th><th class="num">Pzas</th></tr></thead><tbody id="expiring"></tbody></table></div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <header><h2>Últimas ventas</h2><a class="btn ghost sm" href="sales.html">Ver todas</a></header>
+      <div class="table-wrap"><table><thead><tr><th>Folio</th><th>Hora</th><th>Cliente</th><th>Pago</th><th class="num">Total</th></tr></thead><tbody id="recent"></tbody></table></div>
+    </section>
+  </main>
+  <script src="js/core.js"></script>
+  <script src="js/charts.js"></script>
+  <script>
+    POS.boot({ module: 'Dashboard', title: 'Resumen del día' }, async () => {
+      const { api, session, fmt, esc, shade, $ } = POS;
+      const d = await api.get('/reports/dashboard');
+
+      const stat = (label, value, hint, alert) =>
+        `<div class="panel stat ${alert ? 'alert' : ''}"><div class="eyebrow">${label}</div><div class="value">${value}</div><div class="hint">${hint}</div></div>`;
+      $('#stats').innerHTML = [
+        stat('Vendido hoy', fmt.money(d.salesToday), `${d.countToday} ${d.countToday === 1 ? 'venta' : 'ventas'}`),
+        stat('Últimos 7 días', fmt.money(d.salesWeek), 'incluye hoy'),
+        stat('Este mes', fmt.money(d.salesMonth), new Date().toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })),
+        stat('Por resurtir', d.lowStockCount, `de ${d.productCount} presentaciones activas`, d.lowStockCount > 0),
+        stat('Lotes por caducar', d.expiringCount, 'dentro del aviso configurado', d.expiringCount > 0),
+      ].join('');
+
+      $('#low').innerHTML = d.lowStockProducts.length ? d.lowStockProducts.map(v => `
+        <tr><td><div style="display:flex;gap:10px;align-items:center">${shade.swatch(v.shadeCode, 'sm')}<span>${esc(v.displayName)}</span></div></td>
+        <td class="num">${v.stock <= 0 ? '<span class="pill crit"><i class="bi bi-x-circle"></i>0</span>' : fmt.qty(v.stock)}</td><td class="num muted">${fmt.qty(v.minStock)}</td></tr>`).join('')
+        : '<tr><td colspan="3" class="empty"><i class="bi bi-check2-circle"></i> Todo el surtido está sobre su mínimo.</td></tr>';
+
+      $('#recent').innerHTML = d.recentSales.length ? d.recentSales.map(s => `
+        <tr class="clickable" data-href="sales.html#${s.id}"><td class="mono">${esc(s.folio)}</td><td>${fmt.dateTime(s.createdAt)}</td>
+        <td>${esc(s.customerName)}</td><td>${esc(s.paymentMethod)}</td><td class="num">${fmt.money(s.total)}</td></tr>`).join('')
+        : '<tr><td colspan="5" class="empty">Aún no hay ventas. La primera aparecerá aquí.</td></tr>';
+      $('#recent').addEventListener('click', e => { const r = e.target.closest('[data-href]'); if (r) location.href = r.dataset.href; });
+
+      if (session.can('Reports')) {
+        const days = Charts.fillDays(await api.get('/reports/sales-by-day?days=14'), 14);
+        $('#trend-panel').hidden = false;
+        $('#trend-total').textContent = fmt.money(days.reduce((s, x) => s + x.total, 0));
+        Charts.area($('#trend'), days);
+      }
+
+      if (session.can('Inventory')) {
+        const settings = await api.get('/settings');
+        const warnDays = Number(settings.find(s => s.key === 'ExpirationWarningDays')?.value || 60);
+        $('#exp-window').textContent = `próximos ${warnDays} días`;
+        const lots = await api.get('/inventory/expiring?days=' + warnDays);
+        $('#expiring').innerHTML = lots.length ? lots.slice(0, 8).map(b => `
+          <tr><td>${esc(b.description)}</td><td class="mono">${esc(b.lotNumber)}</td>
+          <td>${b.daysToExpire < 0 ? `<span class="pill crit"><i class="bi bi-x-octagon"></i>Caducado</span>` : `<span class="pill ${b.daysToExpire <= 30 ? 'warn' : ''}">${fmt.day(b.expirationDate)} · ${b.daysToExpire} d</span>`}</td>
+          <td class="num">${fmt.qty(b.quantity)}</td></tr>`).join('')
+          : '<tr><td colspan="4" class="empty"><i class="bi bi-check2-circle"></i> Ningún lote caduca en este periodo.</td></tr>';
+      } else {
+        $('#expiring').closest('.panel').hidden = true;
+      }
+    });
+  </script>
+</body>
+</html>
