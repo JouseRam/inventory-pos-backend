@@ -35,6 +35,26 @@ public class IdentityService(UserManager<AppUser> users, ApplicationDbContext db
         return new AuthResponseDto(token, expiresAt, await BuildProfileAsync(user, ct));
     }
 
+    public async Task<bool> NeedsSetupAsync(CancellationToken ct = default) => !await users.Users.AnyAsync(ct);
+
+    public async Task<AuthResponseDto> SetupFirstAdminAsync(FirstAdminDto dto, CancellationToken ct = default)
+    {
+        if (!await NeedsSetupAsync(ct))
+            throw new ConflictException("La caja ya está configurada; inicia sesión con un usuario existente.");
+
+        var user = new AppUser { UserName = dto.UserName.Trim(), FullName = dto.FullName.Trim(), IsSuperAdmin = true };
+        EnsureSucceeded(await users.CreateAsync(user, dto.Password));
+
+        if (!string.IsNullOrWhiteSpace(dto.BusinessName))
+        {
+            var setting = await db.Settings.FirstOrDefaultAsync(s => s.Key == "BusinessName", ct);
+            if (setting != null) { setting.Value = dto.BusinessName.Trim(); await db.SaveChangesAsync(ct); }
+        }
+
+        var (token, expiresAt) = CreateToken(user);
+        return new AuthResponseDto(token, expiresAt, await BuildProfileAsync(user, ct));
+    }
+
     public async Task<ProfileDto> GetProfileAsync(string userId, CancellationToken ct = default)
     {
         var user = await users.FindByIdAsync(userId);

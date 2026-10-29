@@ -45,14 +45,18 @@ public class ProductVariantRepository(ApplicationDbContext db) : Repository<Prod
         return await WithProduct.Where(v => list.Contains(v.Id)).ToListAsync(ct);
     }
 
-    public async Task<IReadOnlyList<ProductVariant>> SearchAsync(string q, int take, CancellationToken ct = default) =>
-        await WithProduct.AsNoTracking()
+    public async Task<IReadOnlyList<ProductVariant>> SearchAsync(string q, int take, CancellationToken ct = default)
+    {
+        var matches = await WithProduct.AsNoTracking()
             .Where(v => v.IsActive && v.Product.IsActive &&
                 (v.Product.Name.Contains(q) || v.SKU.Contains(q) || v.Barcode == q
                  || (v.ShadeCode != null && v.ShadeCode.StartsWith(q)) || (v.ShadeName != null && v.ShadeName.Contains(q))
                  || (v.Product.Brand != null && v.Product.Brand.Name.Contains(q))))
-            .OrderBy(v => v.Product.Name).ThenBy(v => v.ShadeCode).ThenBy(v => v.Size)
+            .OrderBy(v => v.Product.Name).ThenBy(v => v.ShadeCode)
             .Take(take).ToListAsync(ct);
+        // Size is decimal, which SQLite cannot sort; the page of results is small.
+        return matches.OrderBy(v => v.Product.Name).ThenBy(v => v.ShadeCode).ThenBy(v => v.Size).ToList();
+    }
 
     public Task<ProductVariant?> GetByCodeAsync(string code, CancellationToken ct = default) =>
         WithProduct.AsNoTracking()
@@ -61,10 +65,12 @@ public class ProductVariantRepository(ApplicationDbContext db) : Repository<Prod
 
     public async Task<IReadOnlyList<ProductVariant>> GetLowStockAsync(int? take = null, CancellationToken ct = default)
     {
-        var query = WithProduct.AsNoTracking()
+        // Sorted in memory: SQLite cannot ORDER BY a decimal column, and the low-stock list is short.
+        var list = await WithProduct.AsNoTracking()
             .Where(v => v.IsActive && v.Product.IsActive && v.Stock <= v.MinStock)
-            .OrderBy(v => v.Stock).ThenBy(v => v.Product.Name);
-        return take.HasValue ? await query.Take(take.Value).ToListAsync(ct) : await query.ToListAsync(ct);
+            .ToListAsync(ct);
+        var sorted = list.OrderBy(v => v.Stock).ThenBy(v => v.Product.Name);
+        return (take.HasValue ? sorted.Take(take.Value) : sorted).ToList();
     }
 }
 

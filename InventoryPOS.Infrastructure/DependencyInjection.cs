@@ -17,9 +17,16 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration config)
     {
+        var database = config.GetSection(DatabaseOptions.Section).Get<DatabaseOptions>() ?? new DatabaseOptions();
+        services.AddSingleton(database);
         services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(config.GetConnectionString("DefaultConnection"),
-                sql => sql.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
+        {
+            if (database.IsSqlite)
+                options.UseSqlite(config.GetConnectionString("Sqlite"), sql => sql.MigrationsAssembly(DatabaseOptions.SqliteMigrationsAssembly));
+            else
+                options.UseSqlServer(config.GetConnectionString("DefaultConnection"),
+                    sql => sql.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName));
+        });
 
         services.AddIdentityCore<AppUser>(o =>
             {
@@ -43,6 +50,17 @@ public static class DependencyInjection
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<DbSeeder>();
+        services.AddScoped<DatabaseInitializer>();
+        if (database.IsSqlite)
+        {
+            services.AddSingleton<SqliteBackupService>();
+            services.AddHostedService(sp => sp.GetRequiredService<SqliteBackupService>());
+            services.AddSingleton<IBackupService>(sp => sp.GetRequiredService<SqliteBackupService>());
+        }
+        else
+        {
+            services.AddSingleton<IBackupService, NoBackupService>();
+        }
         services.AddSingleton<IDateTimeProvider>(new DateTimeProvider(DateTimeProvider.ResolveTimeZone(config["Pos:TimeZone"])));
         return services;
     }

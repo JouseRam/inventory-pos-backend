@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\InventoryPOS.Application\InventoryPOS.Application.csproj" />
     <ProjectReference Include="..\InventoryPOS.Infrastructure\InventoryPOS.Infrastructure.csproj" />
+    <ProjectReference Include="..\InventoryPOS.Infrastructure.Sqlite\InventoryPOS.Infrastructure.Sqlite.csproj" />
   </ItemGroup>
 
 </Project>

@@ -19,6 +19,16 @@ public class AuthController(IIdentityService identity, ICurrentUser currentUser)
     [EnableRateLimiting("login")]
     public Task<AuthResponseDto> Login(LoginDto dto, CancellationToken ct) => identity.LoginAsync(dto, ct);
 
+    /// <summary>Tells the sign-in screen whether this is a fresh install that needs its first admin.</summary>
+    [HttpGet("setup")]
+    [AllowAnonymous]
+    public async Task<IActionResult> SetupStatus(CancellationToken ct) => Ok(new { needsSetup = await identity.NeedsSetupAsync(ct) });
+
+    [HttpPost("setup")]
+    [AllowAnonymous]
+    [EnableRateLimiting("login")]
+    public Task<AuthResponseDto> Setup(FirstAdminDto dto, CancellationToken ct) => identity.SetupFirstAdminAsync(dto, ct);
+
     [HttpGet("me")]
     public Task<ProfileDto> Me(CancellationToken ct) => identity.GetProfileAsync(currentUser.RequireUserId(), ct);
 }
@@ -57,6 +67,18 @@ public class SettingsController(SettingService service) : ControllerBase
 
     [HttpPut]
     public Task<IReadOnlyList<SettingDto>> Update(Dictionary<string, string?> values, CancellationToken ct) => service.UpdateAsync(values, ct);
+}
+
+[ApiController]
+[Route("api/system")]
+[RequireModule(PosModules.Settings)]
+public class SystemController(IBackupService backups) : ControllerBase
+{
+    [HttpGet("backups")]
+    public BackupStatusDto Backups() => backups.GetStatus();
+
+    [HttpPost("backups")]
+    public Task<BackupFileDto> BackupNow(CancellationToken ct) => backups.BackupNowAsync(ct);
 }
 
 [ApiController]

@@ -13,11 +13,17 @@ public record UserDto(string Id, string UserName, string FullName, string? Email
 public record UserCreateDto(string UserName, string FullName, string? Email, string Password, bool IsSuperAdmin,
     List<ModulePermissionDto>? Permissions);
 public record UserUpdateDto(string FullName, string? Email, bool IsActive, bool IsSuperAdmin, string? NewPassword);
+/// <summary>First-run setup on a fresh register: creates the owner account and names the store.</summary>
+public record FirstAdminDto(string UserName, string FullName, string Password, string? BusinessName);
 
 /// <summary>User accounts and login; implemented over ASP.NET Core Identity in Infrastructure.</summary>
 public interface IIdentityService
 {
     Task<AuthResponseDto> LoginAsync(LoginDto dto, CancellationToken ct = default);
+    /// <summary>True while no user exists (a freshly installed register).</summary>
+    Task<bool> NeedsSetupAsync(CancellationToken ct = default);
+    /// <summary>Creates the first super admin and signs it in; refused once any user exists.</summary>
+    Task<AuthResponseDto> SetupFirstAdminAsync(FirstAdminDto dto, CancellationToken ct = default);
     Task<ProfileDto> GetProfileAsync(string userId, CancellationToken ct = default);
     Task<IReadOnlyList<UserDto>> ListAsync(CancellationToken ct = default);
     Task<UserDto> CreateAsync(UserCreateDto dto, CancellationToken ct = default);
@@ -58,6 +64,18 @@ public class UserCreateValidator : AbstractValidator<UserCreateDto>
         RuleFor(x => x.Email).EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.Email)).WithMessage("Correo inválido.");
         RuleFor(x => x.Password).NotEmpty().MinimumLength(8).WithMessage("La contraseña debe tener al menos 8 caracteres.");
         RuleForEach(x => x.Permissions).SetValidator(new ModulePermissionValidator());
+    }
+}
+
+public class FirstAdminValidator : AbstractValidator<FirstAdminDto>
+{
+    public FirstAdminValidator()
+    {
+        RuleFor(x => x.UserName).NotEmpty().WithMessage("El usuario es requerido.").MaximumLength(50)
+            .Matches("^[a-zA-Z0-9._-]+$").WithMessage("El usuario solo admite letras, números, punto, guion y guion bajo.");
+        RuleFor(x => x.FullName).NotEmpty().WithMessage("El nombre es requerido.").MaximumLength(150);
+        RuleFor(x => x.Password).NotEmpty().MinimumLength(8).WithMessage("La contraseña debe tener al menos 8 caracteres.");
+        RuleFor(x => x.BusinessName).MaximumLength(150);
     }
 }
 

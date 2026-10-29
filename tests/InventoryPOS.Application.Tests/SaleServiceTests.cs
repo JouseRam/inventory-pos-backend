@@ -205,4 +205,18 @@ public class InventoryTests
         Assert.Equal(MovementTypes.AdjustmentOut, movement.Type);
         Assert.Equal(4, await ctx.StockOfAsync(dye.Id));
     }
+
+    [Fact]
+    public async Task Variant_search_matches_shade_and_reports_low_stock()
+    {
+        using var ctx = new PosTestContext();
+        var dye = await ctx.CreateDyeAsync();
+        await ctx.ReceiveAsync(dye.Id, ("A", "2027-01-31", 1));
+
+        var found = await ctx.Products.SearchVariantsAsync("7.1");
+        var low = await ctx.Products.LowStockAsync();
+
+        Assert.Equal(dye.Id, Assert.Single(found).Id);
+        Assert.Equal(dye.Id, Assert.Single(low).Id);
+    }
 }
