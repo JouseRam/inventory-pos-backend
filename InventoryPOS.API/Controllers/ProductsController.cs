@@ -39,21 +39,22 @@ public class ProductsController(ProductService service) : ControllerBase
     public Task<ProductDto> AddVariant(int id, VariantSaveDto dto, CancellationToken ct) => service.AddVariantAsync(id, dto, ct);
 }
 
-/// <summary>Sellable variants: lookup endpoints are shared with the POS (Sales module).</summary>
+/// <summary>Sellable variants: lookups serve the POS, inventory and receiving screens, so any signed-in user may run them.</summary>
 [ApiController]
 [Route("api/variants")]
 [RequireModule(PosModules.Products)]
 public class VariantsController(ProductService service) : ControllerBase
 {
     [HttpGet("search")]
-    [RequireModule(PosModules.Sales)]
+    [AnyUser]
     public Task<IReadOnlyList<VariantDto>> Search([FromQuery] string? q, CancellationToken ct) => service.SearchVariantsAsync(q, ct);
 
     [HttpGet("code/{code}")]
-    [RequireModule(PosModules.Sales)]
+    [AnyUser]
     public Task<VariantDto> GetByCode(string code, CancellationToken ct) => service.GetVariantByCodeAsync(code, ct);
 
     [HttpGet("low-stock")]
+    [RequireModule(PosModules.Inventory)]
     public Task<IReadOnlyList<VariantDto>> LowStock(CancellationToken ct) => service.LowStockAsync(ct);
 
     [HttpPut("{id:int}")]

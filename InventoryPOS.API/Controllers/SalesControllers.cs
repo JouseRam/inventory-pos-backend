@@ -38,7 +38,7 @@ public class CashSessionsController(CashSessionService service) : ControllerBase
 {
     /// <summary>The caller's open session, or 204 when the register is closed.</summary>
     [HttpGet("current")]
-    [RequireModule(PosModules.Sales)]
+    [AnyUser]
     public async Task<IActionResult> Current(CancellationToken ct)
     {
         var session = await service.GetCurrentAsync(ct);
