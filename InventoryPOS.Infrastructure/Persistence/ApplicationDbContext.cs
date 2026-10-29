@@ -1,62 +1,63 @@
-using InventoryPOS.Domain;
+using InventoryPOS.Domain.Entities;
+using InventoryPOS.Infrastructure.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace InventoryPOS.Infrastructure.Persistence;
 
-public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : DbContext(options)
+public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<AppUser>(options)
 {
-    public DbSet<Product> Products => Set<Product>();
+    // ── Catalogs ──
+    public DbSet<Brand> Brands => Set<Brand>();
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<Customer> Customers => Set<Customer>();
+
+    // ── Products and inventory ──
+    public DbSet<Product> Products => Set<Product>();
+    public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
+    public DbSet<ProductBatch> ProductBatches => Set<ProductBatch>();
+    public DbSet<InventoryMovement> InventoryMovements => Set<InventoryMovement>();
+    public DbSet<Purchase> Purchases => Set<Purchase>();
+    public DbSet<PurchaseItem> PurchaseItems => Set<PurchaseItem>();
+
+    // ── Sales and cash register ──
     public DbSet<Sale> Sales => Set<Sale>();
     public DbSet<SaleItem> SaleItems => Set<SaleItem>();
+    public DbSet<SalePayment> SalePayments => Set<SalePayment>();
+    public DbSet<CashSession> CashSessions => Set<CashSession>();
+    public DbSet<CashMovement> CashMovements => Set<CashMovement>();
 
-    protected override void OnModelCreating(ModelBuilder model)
+    // ── System ──
+    public DbSet<Setting> Settings => Set<Setting>();
+    public DbSet<UserModulePermission> UserModulePermissions => Set<UserModulePermission>();
+    public DbSet<FolioSequence> FolioSequences => Set<FolioSequence>();
+
+    private static readonly ValueConverter<DateTime, DateTime> UtcConverter =
+        new(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+    private static readonly ValueConverter<DateTime?, DateTime?> NullableUtcConverter =
+        new(v => v, v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v);
+
+    protected override void OnModelCreating(ModelBuilder builder)
     {
-        base.OnModelCreating(model);
+        base.OnModelCreating(builder);
+        builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+        MarkTimestampsAsUtc(builder);
+    }
 
-        model.Entity<Product>(e =>
+    /// <summary>
+    /// Timestamps are stored in UTC; reading them back as Kind=Utc makes the API serialize them with "Z"
+    /// so the browser converts to local time. Calendar dates (expiration) are left untouched.
+    /// </summary>
+    private static void MarkTimestampsAsUtc(ModelBuilder builder)
+    {
+        foreach (var entity in builder.Model.GetEntityTypes())
+        foreach (var property in entity.GetProperties())
         {
-            e.Property(p => p.Price).HasPrecision(18, 2);
-            e.Property(p => p.Cost).HasPrecision(18, 2);
-            e.Property(p => p.Stock).HasPrecision(18, 3);
-            e.Property(p => p.MinStock).HasPrecision(18, 3);
-            e.HasOne(p => p.Category).WithMany(c => c.Products)
-                .HasForeignKey(p => p.CategoryId).OnDelete(DeleteBehavior.SetNull);
-            e.HasOne(p => p.Supplier).WithMany(s => s.Products)
-                .HasForeignKey(p => p.SupplierId).OnDelete(DeleteBehavior.SetNull);
-        });
-
-        model.Entity<Sale>(e =>
-        {
-            e.Property(s => s.Subtotal).HasPrecision(18, 2);
-            e.Property(s => s.Discount).HasPrecision(18, 2);
-            e.Property(s => s.Tax).HasPrecision(18, 2);
-            e.Property(s => s.Total).HasPrecision(18, 2);
-            e.Property(s => s.AmountPaid).HasPrecision(18, 2);
-            e.Property(s => s.Change).HasPrecision(18, 2);
-            e.HasOne(s => s.Customer).WithMany(c => c.Sales)
-                .HasForeignKey(s => s.CustomerId).OnDelete(DeleteBehavior.SetNull);
-        });
-
-        model.Entity<SaleItem>(e =>
-        {
-            e.Property(i => i.Quantity).HasPrecision(18, 3);
-            e.Property(i => i.UnitPrice).HasPrecision(18, 2);
-            e.Property(i => i.Discount).HasPrecision(18, 2);
-            e.Property(i => i.Subtotal).HasPrecision(18, 2);
-            e.HasOne(i => i.Sale).WithMany(s => s.Items)
-                .HasForeignKey(i => i.SaleId).OnDelete(DeleteBehavior.Cascade);
-            e.HasOne(i => i.Product).WithMany(p => p.SaleItems)
-                .HasForeignKey(i => i.ProductId).OnDelete(DeleteBehavior.Restrict);
-        });
-
-        // Seed data
-        model.Entity<Category>().HasData(
-            new Category { Id = 1, Name = "General", Description = "Categoría general" },
-            new Category { Id = 2, Name = "Electrónica", Description = "Productos electrónicos" },
-            new Category { Id = 3, Name = "Herramientas", Description = "Herramientas y equipos" }
-        );
+            if (property.Name == nameof(ProductBatch.ExpirationDate)) continue;
+            if (property.ClrType == typeof(DateTime)) property.SetValueConverter(UtcConverter);
+            else if (property.ClrType == typeof(DateTime?)) property.SetValueConverter(NullableUtcConverter);
+        }
     }
 }
