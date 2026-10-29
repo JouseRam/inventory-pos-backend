@@ -1,33 +1,62 @@
 ####################################
-# .NET / C#
+# .NET / C# build output
 ####################################
 bin/
 obj/
+[Dd]ebug/
+[Rr]elease/
+publish/
+artifacts/
+*.nupkg
+
+####################################
+# Visual Studio / Rider / VS Code
+####################################
+.vs/
+.vscode/
+.idea/
 *.user
+*.rsuser
 *.suo
 *.userosscache
 *.sln.docstates
-.vs/
+*.pubxml
+*.pubxml.user
 
 ####################################
-# Visual Studio Code
+# Tests and coverage
 ####################################
-.vscode/
+TestResults/
+coverage*/
+*.coverage
+*.trx
 
 ####################################
 # Logs
 ####################################
 *.log
+logs/
 
 ####################################
 # Configuración sensible
+# Los secretos de desarrollo van en `dotnet user-secrets`, nunca en el repo.
 ####################################
 appsettings.Production.json
 appsettings.Local.json
+secrets.json
+.env
+.env.*
+
+####################################
+# Bases de datos locales
+####################################
+*.mdf
+*.ldf
+*.db
+*.sqlite
 
 ####################################
 # Sistema Operativo
 ####################################
 .DS_Store
 Thumbs.db
-
