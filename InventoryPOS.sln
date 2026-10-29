@@ -11,6 +11,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryPOS.Application", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryPOS.Infrastructure", "InventoryPOS.Infrastructure\InventoryPOS.Infrastructure.csproj", "{417CD1D8-8C72-4414-9D0F-B589019383D5}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{1D275BAB-FBB0-4B15-BEE2-495476BDAE9C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryPOS.Application.Tests", "tests\InventoryPOS.Application.Tests\InventoryPOS.Application.Tests.csproj", "{B68C84D8-7471-4412-A188-0D4617500459}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +40,12 @@ Global
 		{417CD1D8-8C72-4414-9D0F-B589019383D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{417CD1D8-8C72-4414-9D0F-B589019383D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{417CD1D8-8C72-4414-9D0F-B589019383D5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B68C84D8-7471-4412-A188-0D4617500459}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B68C84D8-7471-4412-A188-0D4617500459}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B68C84D8-7471-4412-A188-0D4617500459}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B68C84D8-7471-4412-A188-0D4617500459}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{B68C84D8-7471-4412-A188-0D4617500459} = {1D275BAB-FBB0-4B15-BEE2-495476BDAE9C}
 	EndGlobalSection
 EndGlobal
