@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryPOS.Application.Te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryPOS.Infrastructure.Sqlite", "InventoryPOS.Infrastructure.Sqlite\InventoryPOS.Infrastructure.Sqlite.csproj", "{FD0595A3-649A-413D-A641-CB8834CA454E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryPOS.Desktop", "InventoryPOS.Desktop\InventoryPOS.Desktop.csproj", "{35B0E73F-9F0E-4C5C-9B76-8BEE60CBF007}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -50,6 +52,10 @@ Global
 		{FD0595A3-649A-413D-A641-CB8834CA454E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FD0595A3-649A-413D-A641-CB8834CA454E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FD0595A3-649A-413D-A641-CB8834CA454E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{35B0E73F-9F0E-4C5C-9B76-8BEE60CBF007}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{35B0E73F-9F0E-4C5C-9B76-8BEE60CBF007}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{35B0E73F-9F0E-4C5C-9B76-8BEE60CBF007}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{35B0E73F-9F0E-4C5C-9B76-8BEE60CBF007}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{B68C84D8-7471-4412-A188-0D4617500459} = {1D275BAB-FBB0-4B15-BEE2-495476BDAE9C}
