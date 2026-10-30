@@ -113,8 +113,9 @@ public static class PosWebApp
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-            else
+            else if (builder.Configuration.GetValue("Http:RedirectToHttps", true))
             {
+                // Turn off (Http:RedirectToHttps=false) until the host has a certificate, or every request bounces to a dead https URL.
                 app.UseHsts();
                 app.UseHttpsRedirection();
             }
