@@ -1,11 +1,12 @@
 using InventoryPOS.Application.Common;
+using InventoryPOS.Application.Features.Sync;
 using InventoryPOS.Domain.Common;
 using InventoryPOS.Domain.Constants;
 using InventoryPOS.Domain.Interfaces;
 
 namespace InventoryPOS.Application.Features.Inventory;
 
-public class InventoryService(IUnitOfWork uow, StockService stock, IDateTimeProvider clock)
+public class InventoryService(IUnitOfWork uow, StockService stock, IDateTimeProvider clock, PosGuard guard)
 {
     public const string AdjustmentReference = "AJUSTE";
 
@@ -33,6 +34,7 @@ public class InventoryService(IUnitOfWork uow, StockService stock, IDateTimeProv
 
     public async Task<MovementDto> AdjustAsync(AdjustmentDto dto, CancellationToken ct = default)
     {
+        guard.EnsureCanOperate();
         var variant = await uow.Variants.GetWithProductAsync(dto.VariantId, ct) ?? throw NotFoundException.For("Variante", dto.VariantId);
         await uow.ExecuteInTransactionAsync(async () =>
         {

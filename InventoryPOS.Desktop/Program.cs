@@ -53,6 +53,7 @@ internal static class Program
                 builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     [PosWebApp.DesktopFlag] = "true",
+                    ["Pos:Role"] = "Register",
                     ["Database:Provider"] = "Sqlite",
                     ["Database:AutoMigrate"] = "true",
                     ["Database:BackupDirectory"] = paths.Backups,

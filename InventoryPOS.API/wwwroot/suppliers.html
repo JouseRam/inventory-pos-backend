@@ -16,7 +16,7 @@
     POS.boot({ module: 'Suppliers', title: 'Proveedores' }, async () => {
       const { esc, session } = POS;
       await crud({
-        mount: document.getElementById('crud'), endpoint: '/suppliers', noun: 'proveedor', canEdit: session.can('Suppliers', true),
+        mount: document.getElementById('crud'), endpoint: '/suppliers', noun: 'proveedor', canEdit: POS.canAdmin('Suppliers'),
         search: 'Nombre o contacto', emptyText: 'Aún no hay proveedores registrados.',
         columns: [
           { label: 'Proveedor', cell: r => `<b>${esc(r.name)}</b>` },

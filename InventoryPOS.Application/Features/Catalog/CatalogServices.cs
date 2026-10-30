@@ -1,11 +1,12 @@
 using InventoryPOS.Application.Common;
+using InventoryPOS.Application.Features.Sync;
 using InventoryPOS.Domain.Common;
 using InventoryPOS.Domain.Entities;
 using InventoryPOS.Domain.Interfaces;
 
 namespace InventoryPOS.Application.Features.Catalog;
 
-public class BrandService(IUnitOfWork uow)
+public class BrandService(IUnitOfWork uow, PosGuard guard)
 {
     private IRepository<Brand> Repo => uow.Repository<Brand>();
 
@@ -20,6 +21,7 @@ public class BrandService(IUnitOfWork uow)
 
     public async Task<BrandDto> CreateAsync(BrandSaveDto dto, CancellationToken ct = default)
     {
+        await guard.EnsureCanAdministerAsync(ct);
         await EnsureUniqueAsync(dto.Name, null, ct);
         var brand = new Brand { Name = dto.Name.Trim(), IsActive = dto.IsActive };
         Repo.Add(brand);
@@ -29,6 +31,7 @@ public class BrandService(IUnitOfWork uow)
 
     public async Task<BrandDto> UpdateAsync(int id, BrandSaveDto dto, CancellationToken ct = default)
     {
+        await guard.EnsureCanAdministerAsync(ct);
         var brand = await Repo.GetByIdAsync(id, ct) ?? throw NotFoundException.For("Marca", id);
         await EnsureUniqueAsync(dto.Name, id, ct);
         brand.Name = dto.Name.Trim();
@@ -41,6 +44,7 @@ public class BrandService(IUnitOfWork uow)
     /// <summary>Deactivates the brand when products use it, otherwise deletes it.</summary>
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
+        await guard.EnsureCanAdministerAsync(ct);
         var brand = await Repo.GetByIdAsync(id, ct) ?? throw NotFoundException.For("Marca", id);
         if (await uow.Products.AnyAsync(p => p.BrandId == id, ct))
             brand.IsActive = false;
@@ -57,7 +61,7 @@ public class BrandService(IUnitOfWork uow)
     }
 }
 
-public class CategoryService(IUnitOfWork uow)
+public class CategoryService(IUnitOfWork uow, PosGuard guard)
 {
     private IRepository<Category> Repo => uow.Repository<Category>();
 
@@ -80,6 +84,7 @@ public class CategoryService(IUnitOfWork uow)
 
     public async Task<CategoryDto> CreateAsync(CategorySaveDto dto, CancellationToken ct = default)
     {
+        await guard.EnsureCanAdministerAsync(ct);
         await ValidateAsync(dto, null, ct);
         var category = new Category();
         Apply(category, dto);
@@ -90,6 +95,7 @@ public class CategoryService(IUnitOfWork uow)
 
     public async Task<CategoryDto> UpdateAsync(int id, CategorySaveDto dto, CancellationToken ct = default)
     {
+        await guard.EnsureCanAdministerAsync(ct);
         var category = await Repo.GetByIdAsync(id, ct) ?? throw NotFoundException.For("Categoría", id);
         await ValidateAsync(dto, id, ct);
         Apply(category, dto);
@@ -101,6 +107,7 @@ public class CategoryService(IUnitOfWork uow)
     /// <summary>Deactivates the category when it has products or subcategories, otherwise deletes it.</summary>
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
+        await guard.EnsureCanAdministerAsync(ct);
         var category = await Repo.GetByIdAsync(id, ct) ?? throw NotFoundException.For("Categoría", id);
         var inUse = await uow.Products.AnyAsync(p => p.CategoryId == id, ct) || await Repo.AnyAsync(c => c.ParentId == id, ct);
         if (inUse)
@@ -135,7 +142,7 @@ public class CategoryService(IUnitOfWork uow)
         parentId.HasValue ? (await Repo.GetByIdAsync(parentId.Value, ct))?.Name : null;
 }
 
-public class SupplierService(IUnitOfWork uow)
+public class SupplierService(IUnitOfWork uow, PosGuard guard)
 {
     private IRepository<Supplier> Repo => uow.Repository<Supplier>();
 
@@ -152,6 +159,7 @@ public class SupplierService(IUnitOfWork uow)
 
     public async Task<SupplierDto> CreateAsync(SupplierSaveDto dto, CancellationToken ct = default)
     {
+        await guard.EnsureCanAdministerAsync(ct);
         var supplier = new Supplier();
         Apply(supplier, dto);
         Repo.Add(supplier);
@@ -161,6 +169,7 @@ public class SupplierService(IUnitOfWork uow)
 
     public async Task<SupplierDto> UpdateAsync(int id, SupplierSaveDto dto, CancellationToken ct = default)
     {
+        await guard.EnsureCanAdministerAsync(ct);
         var supplier = await Repo.GetByIdAsync(id, ct) ?? throw NotFoundException.For("Proveedor", id);
         Apply(supplier, dto);
         supplier.UpdatedAt = DateTime.UtcNow;
@@ -170,6 +179,7 @@ public class SupplierService(IUnitOfWork uow)
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
+        await guard.EnsureCanAdministerAsync(ct);
         var supplier = await Repo.GetByIdAsync(id, ct) ?? throw NotFoundException.For("Proveedor", id);
         supplier.IsActive = false;
         supplier.UpdatedAt = DateTime.UtcNow;

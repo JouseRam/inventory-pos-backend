@@ -1,5 +1,6 @@
 using System.Globalization;
 using InventoryPOS.Application.Common;
+using InventoryPOS.Application.Features.Sync;
 using InventoryPOS.Domain.Entities;
 using InventoryPOS.Domain.Interfaces;
 
@@ -27,8 +28,11 @@ public static class SettingKeys
     public const string PrinterOpenDrawerOnCash = "PrinterOpenDrawerOnCash";
 }
 
-public class SettingService(IUnitOfWork uow)
+public class SettingService(IUnitOfWork uow, PosGuard guard)
 {
+    /// <summary>Settings of this machine (its printer); never synced and editable on a paired register.</summary>
+    public const string LocalGroup = "Impresora";
+
     private IRepository<Setting> Repo => uow.Repository<Setting>();
 
     public async Task<IReadOnlyList<SettingDto>> ListAsync(CancellationToken ct = default) =>
@@ -39,6 +43,8 @@ public class SettingService(IUnitOfWork uow)
     public async Task<IReadOnlyList<SettingDto>> UpdateAsync(IDictionary<string, string?> values, CancellationToken ct = default)
     {
         var settings = (await Repo.ListAsync(null, ct)).ToDictionary(s => s.Key);
+        if (values.Keys.Any(k => settings.TryGetValue(k, out var s) && s.Group != LocalGroup))
+            await guard.EnsureCanAdministerAsync(ct);
         foreach (var (key, value) in values)
         {
             if (!settings.TryGetValue(key, out var setting))

@@ -1,6 +1,7 @@
 using InventoryPOS.Application.Common;
 using InventoryPOS.Application.Features.Inventory;
 using InventoryPOS.Application.Features.Settings;
+using InventoryPOS.Application.Features.Sync;
 using InventoryPOS.Domain.Common;
 using InventoryPOS.Domain.Constants;
 using InventoryPOS.Domain.Entities;
@@ -10,7 +11,7 @@ namespace InventoryPOS.Application.Features.Sales;
 
 public class SaleService(
     IUnitOfWork uow, StockService stock, IFolioGenerator folios, SettingService settings,
-    ICurrentUser currentUser, IDateTimeProvider clock)
+    ICurrentUser currentUser, IDateTimeProvider clock, PosGuard guard)
 {
     public async Task<PagedResult<SaleDto>> ListAsync(DateTime? from, DateTime? to, string? paymentMethod, int? customerId,
         int page, int pageSize, CancellationToken ct = default)
@@ -31,6 +32,7 @@ public class SaleService(
     /// </summary>
     public async Task<SaleDto> CreateAsync(SaleCreateDto dto, CancellationToken ct = default)
     {
+        guard.EnsureCanOperate();
         var userId = currentUser.RequireUserId();
         var session = await uow.CashSessions.GetOpenByUserAsync(userId, ct)
             ?? throw new DomainException("Abre la caja antes de registrar ventas.");
@@ -85,6 +87,7 @@ public class SaleService(
     /// <summary>Cancels a sale while its cash session is open, returning the stock to the original lots.</summary>
     public async Task<SaleDto> CancelAsync(int id, SaleCancelDto dto, CancellationToken ct = default)
     {
+        guard.EnsureCanOperate();
         var sale = await uow.Sales.GetWithDetailsAsync(id, ct) ?? throw NotFoundException.For("Venta", id);
         if (sale.Status == SaleStatus.Cancelled) throw new DomainException("La venta ya está cancelada.");
         var session = await uow.CashSessions.GetByIdAsync(sale.CashSessionId, ct);

@@ -1,12 +1,13 @@
 using InventoryPOS.Application.Common;
 using InventoryPOS.Application.Features.Inventory;
+using InventoryPOS.Application.Features.Sync;
 using InventoryPOS.Domain.Constants;
 using InventoryPOS.Domain.Entities;
 using InventoryPOS.Domain.Interfaces;
 
 namespace InventoryPOS.Application.Features.Products;
 
-public class ProductService(IUnitOfWork uow, StockService stock)
+public class ProductService(IUnitOfWork uow, StockService stock, PosGuard guard)
 {
     private const string InitialStockReference = "INICIAL";
 
@@ -24,6 +25,8 @@ public class ProductService(IUnitOfWork uow, StockService stock)
 
     public async Task<ProductDto> CreateAsync(ProductCreateDto dto, CancellationToken ct = default)
     {
+        await guard.EnsureCanAdministerAsync(ct);
+        if (dto.Variants.Any(v => v.InitialStock > 0)) guard.EnsureCanOperate();
         await ValidateReferencesAsync(dto.BrandId, dto.CategoryId, dto.SupplierId, ct);
         foreach (var v in dto.Variants)
             await EnsureUniqueCodesAsync(v.SKU, v.Barcode, null, ct);
@@ -51,6 +54,7 @@ public class ProductService(IUnitOfWork uow, StockService stock)
 
     public async Task<ProductDto> UpdateAsync(int id, ProductUpdateDto dto, CancellationToken ct = default)
     {
+        await guard.EnsureCanAdministerAsync(ct);
         var product = await LoadAsync(id, ct);
         await ValidateReferencesAsync(dto.BrandId, dto.CategoryId, dto.SupplierId, ct);
 
@@ -79,6 +83,7 @@ public class ProductService(IUnitOfWork uow, StockService stock)
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
+        await guard.EnsureCanAdministerAsync(ct);
         var product = await LoadAsync(id, ct);
         product.IsActive = false;
         product.UpdatedAt = DateTime.UtcNow;
@@ -87,6 +92,8 @@ public class ProductService(IUnitOfWork uow, StockService stock)
 
     public async Task<ProductDto> AddVariantAsync(int productId, VariantSaveDto dto, CancellationToken ct = default)
     {
+        await guard.EnsureCanAdministerAsync(ct);
+        if (dto.InitialStock > 0) guard.EnsureCanOperate();
         var product = await LoadAsync(productId, ct);
         await EnsureUniqueCodesAsync(dto.SKU, dto.Barcode, null, ct);
         await uow.ExecuteInTransactionAsync(async () =>
@@ -100,6 +107,7 @@ public class ProductService(IUnitOfWork uow, StockService stock)
     /// <summary>Updates variant data; stock is never edited here, only through inventory movements.</summary>
     public async Task<VariantDto> UpdateVariantAsync(int variantId, VariantSaveDto dto, CancellationToken ct = default)
     {
+        await guard.EnsureCanAdministerAsync(ct);
         var variant = await uow.Variants.GetWithProductAsync(variantId, ct) ?? throw NotFoundException.For("Variante", variantId);
         await EnsureUniqueCodesAsync(dto.SKU, dto.Barcode, variantId, ct);
         Apply(variant, dto);
@@ -110,6 +118,7 @@ public class ProductService(IUnitOfWork uow, StockService stock)
 
     public async Task DeleteVariantAsync(int variantId, CancellationToken ct = default)
     {
+        await guard.EnsureCanAdministerAsync(ct);
         var variant = await uow.Variants.GetByIdAsync(variantId, ct) ?? throw NotFoundException.For("Variante", variantId);
         variant.IsActive = false;
         variant.UpdatedAt = DateTime.UtcNow;

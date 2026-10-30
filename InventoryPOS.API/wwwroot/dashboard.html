@@ -41,6 +41,7 @@
   <script>
     POS.boot({ module: 'Dashboard', title: 'Resumen del día' }, async () => {
       const { api, session, fmt, esc, shade, $ } = POS;
+      if (POS.env.central) document.querySelector('#topbar-actions a[href="pos.html"]')?.remove();
       const d = await api.get('/reports/dashboard');
 
       const stat = (label, value, hint, alert) =>

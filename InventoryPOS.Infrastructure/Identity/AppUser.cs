@@ -9,4 +9,6 @@ public class AppUser : IdentityUser
     public bool IsSuperAdmin { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    /// <summary>Last change to the account or its permissions; registers pull users changed after their cursor.</summary>
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

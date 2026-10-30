@@ -1,5 +1,6 @@
 using FluentValidation;
 using InventoryPOS.Application.Common;
+using InventoryPOS.Application.Features.Sync;
 using InventoryPOS.Domain.Common;
 using InventoryPOS.Domain.Constants;
 using InventoryPOS.Domain.Entities;
@@ -22,7 +23,7 @@ public record CashSummaryDto(
 public record CashSessionListItemDto(int Id, string Folio, string UserId, string Status, DateTime OpenedAt, DateTime? ClosedAt,
     decimal OpeningAmount, decimal? ExpectedCash, decimal? CountedCash, decimal? Difference);
 
-public class CashSessionService(IUnitOfWork uow, IFolioGenerator folios, ICurrentUser currentUser, IDateTimeProvider clock)
+public class CashSessionService(IUnitOfWork uow, IFolioGenerator folios, ICurrentUser currentUser, IDateTimeProvider clock, PosGuard guard)
 {
     public async Task<CashSummaryDto?> GetCurrentAsync(CancellationToken ct = default)
     {
@@ -41,6 +42,7 @@ public class CashSessionService(IUnitOfWork uow, IFolioGenerator folios, ICurren
 
     public async Task<CashSummaryDto> OpenAsync(CashOpenDto dto, CancellationToken ct = default)
     {
+        guard.EnsureCanOperate();
         var userId = currentUser.RequireUserId();
         if (await uow.CashSessions.GetOpenByUserAsync(userId, ct) != null)
             throw new ConflictException("Ya tienes una caja abierta; ciérrala antes de abrir otra.");
@@ -122,6 +124,7 @@ public class CashSessionService(IUnitOfWork uow, IFolioGenerator folios, ICurren
 
     private async Task<CashSession> LoadOwnOpenSessionAsync(int sessionId, CancellationToken ct)
     {
+        guard.EnsureCanOperate();
         var session = await uow.CashSessions.GetWithMovementsAsync(sessionId, ct) ?? throw NotFoundException.For("Caja", sessionId);
         if (session.Status != CashSessionStatus.Open) throw new DomainException("La caja ya está cerrada.");
         if (session.UserId != currentUser.UserId && !currentUser.IsSuperAdmin)

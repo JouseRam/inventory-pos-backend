@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using InventoryPOS.Application.Common;
+using InventoryPOS.Application.Features.Sync;
 using InventoryPOS.Application.Features.Users;
 using InventoryPOS.Domain.Common;
 using InventoryPOS.Domain.Constants;
@@ -14,7 +15,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace InventoryPOS.Infrastructure.Identity;
 
-public class IdentityService(UserManager<AppUser> users, ApplicationDbContext db, IOptions<JwtOptions> jwtOptions) : IIdentityService
+public class IdentityService(UserManager<AppUser> users, ApplicationDbContext db, IOptions<JwtOptions> jwtOptions, PosGuard guard) : IIdentityService
 {
     private const string InvalidCredentials = "Usuario o contraseña incorrectos.";
 
@@ -77,6 +78,7 @@ public class IdentityService(UserManager<AppUser> users, ApplicationDbContext db
 
     public async Task<UserDto> CreateAsync(UserCreateDto dto, CancellationToken ct = default)
     {
+        await guard.EnsureCanAdministerAsync(ct);
         var user = new AppUser
         {
             UserName = dto.UserName.Trim(),
@@ -92,6 +94,7 @@ public class IdentityService(UserManager<AppUser> users, ApplicationDbContext db
 
     public async Task<UserDto> UpdateAsync(string id, UserUpdateDto dto, CancellationToken ct = default)
     {
+        await guard.EnsureCanAdministerAsync(ct);
         var user = await users.FindByIdAsync(id) ?? throw NotFoundException.For("Usuario", id);
         if (user.IsSuperAdmin && (!dto.IsSuperAdmin || !dto.IsActive) && await IsLastActiveSuperAdminAsync(user.Id, ct))
             throw new DomainException("No puedes desactivar ni quitar privilegios al último super administrador.");
@@ -100,6 +103,7 @@ public class IdentityService(UserManager<AppUser> users, ApplicationDbContext db
         user.Email = string.IsNullOrWhiteSpace(dto.Email) ? null : dto.Email.Trim();
         user.IsActive = dto.IsActive;
         user.IsSuperAdmin = dto.IsSuperAdmin;
+        user.UpdatedAt = DateTime.UtcNow;
         EnsureSucceeded(await users.UpdateAsync(user));
 
         if (!string.IsNullOrEmpty(dto.NewPassword))
@@ -113,12 +117,15 @@ public class IdentityService(UserManager<AppUser> users, ApplicationDbContext db
     /// <summary>Replaces the user's module permissions; CanEdit implies CanView.</summary>
     public async Task<UserDto> SetPermissionsAsync(string id, IReadOnlyList<ModulePermissionDto> permissions, CancellationToken ct = default)
     {
+        await guard.EnsureCanAdministerAsync(ct);
         var user = await users.FindByIdAsync(id) ?? throw NotFoundException.For("Usuario", id);
         var current = await db.UserModulePermissions.Where(p => p.UserId == id).ToListAsync(ct);
         db.UserModulePermissions.RemoveRange(current);
 
         foreach (var p in permissions.Where(p => PosModules.IsValid(p.Module) && (p.CanView || p.CanEdit)).DistinctBy(p => p.Module))
             db.UserModulePermissions.Add(new UserModulePermission { UserId = id, Module = p.Module, CanView = true, CanEdit = p.CanEdit });
+        // Registers pull users by UpdatedAt, so a permission change must touch the account.
+        user.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(ct);
         return ToDto(user, await db.UserModulePermissions.AsNoTracking().Where(p => p.UserId == id).ToListAsync(ct));

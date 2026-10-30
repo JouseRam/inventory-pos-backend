@@ -18,6 +18,7 @@
       <button role="tab" aria-selected="true" data-tab="business">Negocio</button>
       <button role="tab" aria-selected="false" data-tab="printer">Impresora y respaldos</button>
       <button role="tab" aria-selected="false" data-tab="users" id="users-tab" hidden>Usuarios y permisos</button>
+      <button role="tab" aria-selected="false" data-tab="sync">Sincronización</button>
     </div>
 
     <form data-panel="business" id="settings-form" style="display:grid;gap:20px"></form>
@@ -46,6 +47,34 @@
       <section class="panel">
         <header><h2>Respaldos de la base de datos</h2><button class="btn" type="button" id="backup-btn"><i class="bi bi-cloud-arrow-down"></i>Respaldar ahora</button></header>
         <div class="body" id="backup-info" style="display:grid;gap:10px"></div>
+      </section>
+    </section>
+
+    <section data-panel="sync" hidden style="display:grid;gap:20px">
+      <!-- Register, not paired yet -->
+      <form class="panel" id="pair-form" hidden>
+        <header><h2>Vincular con la web</h2></header>
+        <div class="body" style="display:grid;gap:14px">
+          <p class="muted" style="margin:0;max-width:70ch">Al vincularla, esta caja envía sus ventas, cortes e inventario a la web cada minuto en que haya internet, y recibe de ahí los productos, precios y usuarios. Sin internet sigue vendiendo y se pone al día sola al reconectar.</p>
+          <div class="form-grid">
+            <label class="field"><span>Dirección de la web</span><input id="pair-url" class="mono" placeholder="https://mitienda.somee.com" required maxlength="300"></label>
+            <label class="field"><span>Código de vinculación</span><input id="pair-code" class="mono" placeholder="ABCD2345" required minlength="8" maxlength="8" style="text-transform:uppercase"></label>
+          </div>
+          <p class="muted" style="margin:0;font-size:.85rem">El código se genera en la web, en Configuración › Sincronización › Agregar caja, y dura 15 minutos. Si la caja y la web ya tienen productos, primero deja el catálogo solo en la web.</p>
+          <div class="form-error" id="pair-error" hidden></div>
+          <div><button class="btn primary" type="submit" id="pair-btn"><i class="bi bi-link-45deg"></i>Vincular</button></div>
+        </div>
+      </form>
+      <!-- Register, paired -->
+      <section class="panel" id="sync-status" hidden>
+        <header><h2>Sincronización con la web</h2><button class="btn" type="button" id="sync-now"><i class="bi bi-arrow-repeat"></i>Sincronizar ahora</button></header>
+        <div class="body" id="sync-info"></div>
+      </section>
+      <!-- Central web -->
+      <section class="panel" id="devices-panel" hidden>
+        <header><h2>Cajas vinculadas</h2><button class="btn primary" type="button" id="new-device"><i class="bi bi-plus-lg"></i>Agregar caja</button></header>
+        <div class="body" id="device-code" hidden></div>
+        <div class="table-wrap"><table><thead><tr><th>Caja</th><th>Estado</th><th>Último contacto</th><th>Último envío</th><th></th></tr></thead><tbody id="devices"></tbody></table></div>
       </section>
     </section>
 
@@ -80,6 +109,7 @@
     POS.boot({ module: 'Settings', title: 'Configuración' }, async () => {
       const { api, session, esc, toast, $, $$ } = POS;
       const canEdit = session.can('Settings', true);
+      const canEditBusiness = POS.canAdmin('Settings');
       const isAdmin = session.profile.isSuperAdmin;
 
       // ── Business settings, grouped as the seeder defines them ──
@@ -89,9 +119,10 @@
         $('#settings-form').innerHTML = groups.map(g => `
           <section class="panel"><header><h2>${esc(g)}</h2></header><div class="body form-grid">
             ${list.filter(s => s.group === g).map(s => `<label class="field ${s.type === 'textarea' ? 'span-all' : ''}"><span>${esc(s.label)}</span>
-              ${s.type === 'textarea' ? `<textarea name="${esc(s.key)}" rows="2" ${canEdit ? '' : 'disabled'}>${esc(s.value || '')}</textarea>`
-                : `<input name="${esc(s.key)}" value="${esc(s.value || '')}" ${s.type === 'number' ? 'type="number" step="any"' : ''} ${canEdit ? '' : 'disabled'}>`}</label>`).join('')}
-          </div></section>`).join('') + (canEdit ? '<div><button class="btn primary" type="submit">Guardar configuración</button></div>' : '');
+              ${s.type === 'textarea' ? `<textarea name="${esc(s.key)}" rows="2" ${canEditBusiness ? '' : 'disabled'}>${esc(s.value || '')}</textarea>`
+                : `<input name="${esc(s.key)}" value="${esc(s.value || '')}" ${s.type === 'number' ? 'type="number" step="any"' : ''} ${canEditBusiness ? '' : 'disabled'}>`}</label>`).join('')}
+          </div></section>`).join('') + (canEditBusiness ? '<div><button class="btn primary" type="submit">Guardar configuración</button></div>'
+            : POS.env.catalogLocked ? '<p class="muted" style="margin:0"><i class="bi bi-cloud-check"></i> Los datos del negocio se administran en la web.</p>' : '');
       }
       $('#settings-form').addEventListener('submit', async e => {
         e.preventDefault();
@@ -229,16 +260,92 @@
         try { await api.post('/system/backups'); toast('Respaldo creado.'); await loadBackups(); } catch (err) { POS.fail(err); }
       });
 
+      // ── Sync ──
+      const env = POS.env;
+      async function loadSync() {
+        $('#pair-form').hidden = env.central || env.paired;
+        $('#sync-status').hidden = env.central || !env.paired;
+        $('#devices-panel').hidden = !env.central;
+        $('#pair-btn').disabled = !canEdit;
+        if (env.central) return loadDevices();
+        if (env.paired) return renderStatus(await api.get('/sync/status'));
+      }
+
+      function renderStatus(s) {
+        POS.refreshSyncChip();
+        const row = (label, value) => `<div style="display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line)"><span class="muted">${label}</span><span>${value}</span></div>`;
+        $('#sync-info').innerHTML = [
+          row('Servidor', `<span class="mono">${esc(s.serverUrl)}</span>`),
+          row('Esta caja', esc(s.deviceName || '')),
+          row('Pendientes por enviar', s.pending ? `<span class="pill warn">${s.pending}</span>` : '<span class="pill good"><i class="bi bi-check2"></i>Nada pendiente</span>'),
+          row('Última sincronización', s.lastSuccessAt ? `${POS.fmt.dateTime(s.lastSuccessAt)} (${POS.ago(s.lastSuccessAt)})` : 'Aún no'),
+          s.lastError ? `<div class="form-error" style="margin-top:10px">${esc(s.lastError)}</div>` : '',
+        ].join('');
+      }
+      $('#sync-now').addEventListener('click', async () => {
+        $('#sync-now').disabled = true;
+        try { renderStatus(await api.post('/sync/run')); } catch (err) { POS.fail(err); } finally { $('#sync-now').disabled = false; }
+      });
+
+      $('#pair-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const err = $('#pair-error');
+        err.hidden = true;
+        $('#pair-btn').disabled = true;
+        $('#pair-btn').textContent = 'Vinculando y enviando historial…';
+        try {
+          await api.post('/sync/pair-device', { serverUrl: $('#pair-url').value.trim(), code: $('#pair-code').value.trim().toUpperCase() });
+          // The register now uses the web's accounts: sign in again with your web user.
+          await POS.confirmBox('Caja vinculada. Desde ahora los usuarios son los de la web: vuelve a iniciar sesión con tu usuario de la web.', { okText: 'Iniciar sesión' });
+          POS.session.logout();
+        } catch (ex) {
+          err.textContent = ex.message; err.hidden = false;
+        } finally {
+          $('#pair-btn').disabled = false;
+          $('#pair-btn').innerHTML = '<i class="bi bi-link-45deg"></i>Vincular';
+        }
+      });
+
+      async function loadDevices() {
+        $('#new-device').hidden = !isAdmin;
+        const list = isAdmin ? await api.get('/sync/devices') : [];
+        $('#devices').innerHTML = list.length ? list.map(d => `
+          <tr class="${d.isActive ? '' : 'inactive'}"><td><b>${esc(d.name)}</b></td>
+          <td>${!d.isActive ? '<span class="pill">Revocada</span>' : d.paired ? '<span class="pill good"><i class="bi bi-link-45deg"></i>Vinculada</span>'
+            : `<span class="pill warn">Código <span class="mono">${esc(d.pairingCode)}</span> hasta ${POS.fmt.time(d.pairingExpiresAt)}</span>`}</td>
+          <td>${d.lastSeenAt ? POS.ago(d.lastSeenAt) : '—'}</td><td>${d.lastPushAt ? POS.fmt.dateTime(d.lastPushAt) : '—'}</td>
+          <td class="num">${d.isActive && isAdmin ? `<button class="btn ghost sm danger" type="button" data-revoke="${d.id}">Revocar</button>` : ''}</td></tr>`).join('')
+          : `<tr><td colspan="5" class="empty">${isAdmin ? 'Aún no hay cajas. Agrega una y captura su código en la caja.' : 'Solo un administrador puede ver y vincular cajas.'}</td></tr>`;
+      }
+      $('#new-device').addEventListener('click', async () => {
+        const name = await POS.confirmBox('Nombre de la caja que vas a vincular.', { okText: 'Generar código', input: 'Nombre (ej. Caja mostrador)' });
+        if (!name) return;
+        try {
+          const d = await api.post('/sync/devices', { name });
+          $('#device-code').hidden = false;
+          $('#device-code').innerHTML = `<div style="display:grid;gap:6px;text-align:center"><span class="muted">Captura este código en la caja «${esc(d.name)}», en Configuración › Sincronización</span>
+            <span class="mono" style="font-size:2rem;letter-spacing:.2em;font-weight:600">${esc(d.pairingCode)}</span><span class="muted">Vence a las ${POS.fmt.time(d.pairingExpiresAt)}</span></div>`;
+          await loadDevices();
+        } catch (err) { POS.fail(err); }
+      });
+      $('#devices').addEventListener('click', async e => {
+        const b = e.target.closest('[data-revoke]');
+        if (!b || !await POS.confirmBox('Revocar esta caja. Dejará de enviar ventas a la web hasta que se vuelva a vincular.', { okText: 'Revocar', danger: true })) return;
+        try { await api.del('/sync/devices/' + b.dataset.revoke); toast('Caja revocada.'); await loadDevices(); } catch (err) { POS.fail(err); }
+      });
+
       function show(tab) {
         $$('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
         $$('[data-panel]').forEach(p => { p.hidden = p.dataset.panel !== tab; });
         history.replaceState(null, '', '#' + tab);
-        ({ users: loadUsers, printer: loadPrinter, business: loadSettings })[tab]().catch(POS.fail);
+        ({ users: loadUsers, printer: loadPrinter, business: loadSettings, sync: loadSync })[tab]().catch(POS.fail);
       }
-      $('#users-tab').hidden = !isAdmin;
+      $('#users-tab').hidden = !isAdmin || POS.env.catalogLocked;
+      // The web has no receipt printer and backs up through its database server.
+      $('[data-tab="printer"]').hidden = POS.env.central;
       $$('[data-tab]').forEach(b => b.addEventListener('click', () => show(b.dataset.tab)));
       const requested = location.hash.slice(1);
-      show(requested === 'users' && isAdmin ? 'users' : requested === 'printer' ? 'printer' : 'business');
+      show(requested === 'users' && isAdmin && !POS.env.catalogLocked ? 'users' : ['printer', 'sync'].includes(requested) ? requested : 'business');
     });
   </script>
 </body>

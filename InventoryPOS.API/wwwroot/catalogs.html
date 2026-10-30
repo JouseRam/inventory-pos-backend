@@ -22,7 +22,7 @@
   <script>
     POS.boot({ module: 'Products', title: 'Categorías y marcas' }, async () => {
       const { esc, session, api, $, $$ } = POS;
-      const canEdit = session.can('Products', true);
+      const canEdit = POS.canAdmin('Products');
       const parents = (await api.get('/categories')).filter(c => !c.parentId);
       const cats = crud({
         mount: $('#categories'), endpoint: '/categories', noun: 'categoría', canEdit,

@@ -1,7 +1,7 @@
 /* Products and their sellable variants (shade × size). Stock is never edited here, only through inventory. */
 POS.boot({ module: 'Products', title: 'Productos' }, async () => {
   const { api, session, fmt, esc, shade, toast, fail, confirmBox, formData, fillForm, $, $$ } = POS;
-  const canEdit = session.can('Products', true);
+  const canEdit = POS.canAdmin('Products');
   const [categories, brands, suppliers, catalogs] = await Promise.all([
     api.get('/categories'), api.get('/brands'),
     session.can('Suppliers') ? api.get('/suppliers') : Promise.resolve([]),
@@ -19,6 +19,7 @@ POS.boot({ module: 'Products', title: 'Productos' }, async () => {
   $('#p-brand').insertAdjacentHTML('beforeend', options(brands));
   $('#p-supplier').insertAdjacentHTML('beforeend', options(suppliers));
   if (!canEdit) $('#new-product').hidden = true;
+  $('#locked-note').hidden = !POS.env.catalogLocked;
 
   // ── List ──
   async function load() {

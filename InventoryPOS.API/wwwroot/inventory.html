@@ -64,7 +64,7 @@
   <script>
     POS.boot({ module: 'Inventory', title: 'Existencias' }, async () => {
       const { api, session, fmt, esc, shade, toast, $, $$ } = POS;
-      const canEdit = session.can('Inventory', true);
+      const canEdit = session.can('Inventory', true) && !POS.env.central;
       if (!canEdit) $('#adjust-btn').hidden = true;
 
       // ── Tabs (remembered in the URL hash so links can open a tab) ──

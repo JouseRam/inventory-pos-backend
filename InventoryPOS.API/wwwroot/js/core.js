@@ -231,14 +231,14 @@
   // ── App shell ──
   const NAV = [
     { group: 'Venta', items: [
-      { href: 'pos.html', label: 'Punto de venta', icon: 'bi-upc-scan', module: 'Sales' },
-      { href: 'cash.html', label: 'Caja', icon: 'bi-cash-stack', module: 'CashRegister' },
+      { href: 'pos.html', label: 'Punto de venta', icon: 'bi-upc-scan', module: 'Sales', register: true },
+      { href: 'cash.html', label: 'Caja', icon: 'bi-cash-stack', module: 'CashRegister', register: true },
       { href: 'sales.html', label: 'Ventas', icon: 'bi-receipt', module: 'Sales' },
     ] },
     { group: 'Inventario', items: [
       { href: 'products.html', label: 'Productos', icon: 'bi-palette2', module: 'Products' },
       { href: 'inventory.html', label: 'Existencias', icon: 'bi-box-seam', module: 'Inventory' },
-      { href: 'purchases.html', label: 'Recepciones', icon: 'bi-truck', module: 'Purchases' },
+      { href: 'purchases.html', label: 'Recepciones', icon: 'bi-truck', module: 'Purchases', register: true },
       { href: 'catalogs.html', label: 'Categorías y marcas', icon: 'bi-tags', module: 'Products' },
     ] },
     { group: 'Personas', items: [
@@ -254,10 +254,24 @@
     ] },
   ];
 
+  /** Installation role from /api/sync/status: the web (Central) does not sell; a paired register does not administer. */
+  const env = { role: 'Register', paired: false, central: false, catalogLocked: false, status: null };
+  const visible = i => session.can(i.module) && !(env.central && i.register);
+
   function firstAllowedPage() {
-    for (const g of NAV) for (const i of g.items) if (session.can(i.module)) return i.href;
+    for (const g of NAV) for (const i of g.items) if (visible(i)) return i.href;
     return 'login.html';
   }
+
+  async function loadEnv() {
+    try {
+      const s = await api.get('/sync/status');
+      Object.assign(env, { role: s.role, paired: s.paired, central: s.role === 'Central', catalogLocked: s.role === 'Register' && s.paired, status: s });
+    } catch { /* keep defaults: a standalone register */ }
+  }
+
+  /** Edit rights for administered data (catalog, suppliers, users, business settings). */
+  const canAdmin = module => session.can(module, true) && !env.catalogLocked;
 
   async function loadProfile() {
     const profile = await api.get('/auth/me');
@@ -270,7 +284,7 @@
     const current = location.pathname.split('/').pop() || 'dashboard.html';
     const profile = session.profile;
     const nav = NAV.map(g => {
-      const items = g.items.filter(i => session.can(i.module));
+      const items = g.items.filter(visible);
       if (!items.length) return '';
       return `<div class="nav-group eyebrow">${esc(g.group)}</div><nav class="nav">${items.map(i =>
         `<a href="${i.href}" ${i.href === current ? 'aria-current="page"' : ''}><i class="bi ${i.icon}"></i>${esc(i.label)}</a>`).join('')}</nav>`;
@@ -296,6 +310,7 @@
           <h1>${esc(title)}</h1>
           <div class="spacer"></div>
           <div id="topbar-actions" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+          <a class="cash-chip" id="sync-chip" href="settings.html#sync" hidden><span class="dot"></span><span id="sync-chip-text"></span></a>
           <a class="cash-chip" id="cash-chip" href="cash.html" hidden><span class="dot"></span><span id="cash-chip-text">Caja</span></a>
         </header>
       </div>`;
@@ -310,10 +325,38 @@
     page.addEventListener('click', () => shell.classList.remove('nav-open'));
   }
 
+  /** Relative time in words for the sync chip ("hace 3 min"). */
+  function ago(date) {
+    const min = Math.round((Date.now() - new Date(date).getTime()) / 60000);
+    if (min < 1) return 'hace un momento';
+    if (min < 60) return `hace ${min} min`;
+    const h = Math.round(min / 60);
+    return h < 24 ? `hace ${h} h` : `el ${fmt.date(date)}`;
+  }
+
+  /** Register only: shows whether sales are reaching the web. */
+  function renderSyncChip(s) {
+    const chip = document.getElementById('sync-chip');
+    if (!chip || !s || s.role !== 'Register' || !s.paired) return;
+    chip.hidden = false;
+    const dot = chip.querySelector('.dot');
+    let text, color;
+    if (s.lastError) { text = s.pending ? `Sin conexión · ${s.pending} por enviar` : 'Sin conexión'; color = 'var(--crit)'; }
+    else if (s.pending) { text = `${s.pending} por enviar`; color = 'var(--warn)'; }
+    else { text = s.lastSuccessAt ? `Sincronizado ${ago(s.lastSuccessAt)}` : 'Sincronizando…'; color = 'var(--good)'; }
+    dot.style.background = color;
+    document.getElementById('sync-chip-text').textContent = text;
+    chip.title = s.lastError || (s.serverUrl ? `Servidor: ${s.serverUrl}` : '');
+  }
+
+  async function refreshSyncChip() {
+    try { const s = await api.get('/sync/status'); env.status = s; renderSyncChip(s); return s; } catch { return null; }
+  }
+
   /** Shows the cashier's register state in the top bar on every page. */
   async function refreshCashChip() {
     const chip = document.getElementById('cash-chip');
-    if (!chip || !session.can('Sales')) return null;
+    if (!chip || !session.can('Sales') || env.central) return null;
     try {
       const s = await api.get('/cash-sessions/current');
       chip.hidden = false;
@@ -332,11 +375,17 @@
     try {
       if (!session.profile) await loadProfile();
     } catch (err) { if (err.status !== 401) fail(err); return; }
-    if (module && !session.can(module)) { location.href = firstAllowedPage(); return; }
+    await loadEnv();
+    const page = location.pathname.split('/').pop();
+    const current = NAV.flatMap(g => g.items).find(i => i.href === page);
+    if ((module && !session.can(module)) || (current && !visible(current))) { location.href = firstAllowedPage(); return; }
     buildShell(title);
     refreshCashChip();
+    renderSyncChip(env.status);
+    if (env.role === 'Register' && env.paired) setInterval(refreshSyncChip, 30000);
     try { await run(); } catch (err) { fail(err); }
   }
 
-  window.POS = { api, session, fmt, esc, shade, toast, fail, $, $$, formData, fillForm, dialogForm, confirmBox, boot, refreshCashChip, loadProfile, firstAllowedPage };
+  window.POS = { api, session, env, canAdmin, fmt, esc, shade, toast, fail, $, $$, formData, fillForm, dialogForm, confirmBox, boot,
+    refreshCashChip, refreshSyncChip, loadProfile, firstAllowedPage, ago };
 })();

@@ -7,6 +7,7 @@ using InventoryPOS.Application.Features.Products;
 using InventoryPOS.Application.Features.Reports;
 using InventoryPOS.Application.Features.Sales;
 using InventoryPOS.Application.Features.Settings;
+using InventoryPOS.Application.Features.Sync;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace InventoryPOS.Application;
@@ -30,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<SettingService>();
         services.AddScoped<ReportService>();
         services.AddScoped<PrintingService>();
+        services.AddScoped<PosGuard>();
         return services;
     }
 }

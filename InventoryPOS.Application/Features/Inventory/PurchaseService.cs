@@ -1,4 +1,5 @@
 using InventoryPOS.Application.Common;
+using InventoryPOS.Application.Features.Sync;
 using InventoryPOS.Domain.Common;
 using InventoryPOS.Domain.Constants;
 using InventoryPOS.Domain.Entities;
@@ -6,7 +7,7 @@ using InventoryPOS.Domain.Interfaces;
 
 namespace InventoryPOS.Application.Features.Inventory;
 
-public class PurchaseService(IUnitOfWork uow, StockService stock, IFolioGenerator folios, ICurrentUser currentUser, IDateTimeProvider clock)
+public class PurchaseService(IUnitOfWork uow, StockService stock, IFolioGenerator folios, ICurrentUser currentUser, IDateTimeProvider clock, PosGuard guard)
 {
     public async Task<PagedResult<PurchaseDto>> ListAsync(DateTime? from, DateTime? to, int? supplierId, int page, int pageSize,
         CancellationToken ct = default)
@@ -23,6 +24,7 @@ public class PurchaseService(IUnitOfWork uow, StockService stock, IFolioGenerato
     /// <summary>Receives goods: adds stock by lot, records the kardex and updates the variant's last cost.</summary>
     public async Task<PurchaseDto> ReceiveAsync(PurchaseCreateDto dto, CancellationToken ct = default)
     {
+        guard.EnsureCanOperate();
         if (dto.SupplierId.HasValue && !await uow.Repository<Supplier>().AnyAsync(s => s.Id == dto.SupplierId, ct))
             throw NotFoundException.For("Proveedor", dto.SupplierId.Value);
 

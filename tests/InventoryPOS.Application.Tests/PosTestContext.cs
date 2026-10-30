@@ -4,11 +4,13 @@ using InventoryPOS.Application.Features.Inventory;
 using InventoryPOS.Application.Features.Products;
 using InventoryPOS.Application.Features.Sales;
 using InventoryPOS.Application.Features.Settings;
+using InventoryPOS.Application.Features.Sync;
 using InventoryPOS.Domain.Constants;
 using InventoryPOS.Domain.Entities;
 using InventoryPOS.Infrastructure.Identity;
 using InventoryPOS.Infrastructure.Persistence;
 using InventoryPOS.Infrastructure.Services;
+using InventoryPOS.Infrastructure.Sync;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,6 +21,13 @@ public class FakeCurrentUser : ICurrentUser
     public string? UserId { get; set; } = "cashier-1";
     public string? UserName => "cajero";
     public bool IsSuperAdmin { get; set; }
+}
+
+public class FakeEnvironment(PosRole role) : IPosEnvironment
+{
+    public PosRole Role { get; } = role;
+    public bool Paired { get; set; }
+    public Task<bool> IsPairedAsync(CancellationToken ct = default) => Task.FromResult(Paired);
 }
 
 /// <summary>Real services and repositories over an in-memory SQLite database, one per test.</summary>
@@ -35,12 +44,15 @@ public sealed class PosTestContext : IDisposable
     public InventoryService Inventory { get; }
     public SaleService Sales { get; }
     public CashSessionService Cash { get; }
+    public FakeEnvironment Env { get; }
 
-    public PosTestContext()
+    public PosTestContext(PosRole role = PosRole.Register)
     {
+        Env = new FakeEnvironment(role);
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();
-        Db = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(_connection).Options);
+        Db = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(_connection)
+            .AddInterceptors(new SyncSaveChangesInterceptor(role)).Options);
         Db.Database.EnsureCreated();
 
         Db.Users.Add(new AppUser { Id = "cashier-1", UserName = "cajero", FullName = "Cajero" });
@@ -56,12 +68,13 @@ public sealed class PosTestContext : IDisposable
         var folios = new FolioGenerator(Db);
         Uow = new UnitOfWork(Db);
         Stock = new StockService(Uow, User);
-        var settings = new SettingService(Uow);
-        Products = new ProductService(Uow, Stock);
-        Purchases = new PurchaseService(Uow, Stock, folios, User, clock);
-        Inventory = new InventoryService(Uow, Stock, clock);
-        Sales = new SaleService(Uow, Stock, folios, settings, User, clock);
-        Cash = new CashSessionService(Uow, folios, User, clock);
+        var guard = new PosGuard(Env);
+        var settings = new SettingService(Uow, guard);
+        Products = new ProductService(Uow, Stock, guard);
+        Purchases = new PurchaseService(Uow, Stock, folios, User, clock, guard);
+        Inventory = new InventoryService(Uow, Stock, clock, guard);
+        Sales = new SaleService(Uow, Stock, folios, settings, User, clock, guard);
+        Cash = new CashSessionService(Uow, folios, User, clock, guard);
     }
 
     /// <summary>A lot-tracked dye with one shade, priced at 200.</summary>

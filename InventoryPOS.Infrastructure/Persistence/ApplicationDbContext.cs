@@ -34,6 +34,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<UserModulePermission> UserModulePermissions => Set<UserModulePermission>();
     public DbSet<FolioSequence> FolioSequences => Set<FolioSequence>();
 
+    // ── Sync ──
+    public DbSet<SyncOutbox> SyncOutbox => Set<SyncOutbox>();
+    public DbSet<SyncState> SyncStates => Set<SyncState>();
+    public DbSet<SyncDevice> SyncDevices => Set<SyncDevice>();
+
     private static readonly ValueConverter<DateTime, DateTime> UtcConverter =
         new(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
     private static readonly ValueConverter<DateTime?, DateTime?> NullableUtcConverter =
@@ -43,7 +48,15 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     {
         base.OnModelCreating(builder);
         builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+        IndexSyncIdentities(builder);
         MarkTimestampsAsUtc(builder);
+    }
+
+    /// <summary>Every entity is looked up by its global Uid when records travel between register and server.</summary>
+    private static void IndexSyncIdentities(ModelBuilder builder)
+    {
+        foreach (var entity in builder.Model.GetEntityTypes().Where(e => typeof(Domain.Common.BaseEntity).IsAssignableFrom(e.ClrType)))
+            builder.Entity(entity.ClrType).HasIndex(nameof(Domain.Common.BaseEntity.Uid)).IsUnique();
     }
 
     /// <summary>

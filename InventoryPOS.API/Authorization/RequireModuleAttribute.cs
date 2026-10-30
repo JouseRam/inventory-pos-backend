@@ -27,7 +27,9 @@ public class ModuleAuthorizationFilter(string module, bool forceEdit, ICurrentUs
 {
     public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
-        if (context.ActionDescriptor.EndpointMetadata.OfType<AnyUserAttribute>().Any())
+        // Anonymous endpoints (sign-in, register sync with a device token) and [AnyUser] actions skip module checks.
+        var metadata = context.ActionDescriptor.EndpointMetadata;
+        if (metadata.OfType<AnyUserAttribute>().Any() || metadata.OfType<Microsoft.AspNetCore.Authorization.IAllowAnonymous>().Any())
             return;
 
         // The closest attribute wins: skip the controller-level filter when the action declares its own.
