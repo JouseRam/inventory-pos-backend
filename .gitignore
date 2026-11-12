@@ -59,3 +59,8 @@ secrets.json
 ####################################
 .DS_Store
 Thumbs.db
+
+# Base de datos SQLite de desarrollo
+App_Data/
+*.db-shm
+*.db-wal
