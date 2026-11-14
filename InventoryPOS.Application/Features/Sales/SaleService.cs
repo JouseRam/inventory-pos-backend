@@ -90,6 +90,8 @@ public class SaleService(
         guard.EnsureCanOperate();
         var sale = await uow.Sales.GetWithDetailsAsync(id, ct) ?? throw NotFoundException.For("Venta", id);
         if (sale.Status == SaleStatus.Cancelled) throw new DomainException("La venta ya está cancelada.");
+        if (await uow.Repository<Invoice>().AnyAsync(i => i.SaleId == id && i.Status == InvoiceStatus.Active, ct))
+            throw new DomainException("La venta está facturada: cancela primero la factura ante el SAT.");
         var session = await uow.CashSessions.GetByIdAsync(sale.CashSessionId, ct);
         if (session?.Status != CashSessionStatus.Open)
             throw new DomainException("La caja de esta venta ya se cerró; no se puede cancelar.");

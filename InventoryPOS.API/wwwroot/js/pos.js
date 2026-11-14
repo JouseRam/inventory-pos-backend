@@ -203,6 +203,7 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
     ['#pay-cash', '#pay-card', '#pay-transfer', '#pay-card-ref', '#pay-transfer-ref', '#pay-notes'].forEach(id => { $(id).value = ''; });
     $('#pay-body').hidden = false; $('#pay-done').hidden = true;
     $('#pay-confirm').hidden = false; $('#pay-cancel').hidden = false; $('#pay-new').hidden = true; $('#pay-print').hidden = true;
+    $('#pay-invoice').hidden = true;
     $('#pay-error').hidden = true;
     renderQuick();
     renderPay();
@@ -243,6 +244,8 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
       $('#done-change').textContent = fmt.money(sale.change);
       lastSaleId = sale.id;
       $('#pay-print').hidden = !printer.enabled;
+      $('#pay-invoice').hidden = !session.can('Invoicing', true);
+      $('#pay-invoice').innerHTML = '<i class="bi bi-receipt"></i>Facturar';
       $('#done-print').textContent = '';
       if (printer.autoPrint) printTicket(false);
       $('#pay-body').hidden = true; $('#pay-done').hidden = false;
@@ -271,6 +274,10 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
     }
   }
   $('#pay-print').addEventListener('click', () => printTicket(true));
+  // Invoicing needs internet; the dialog warns and waits for the connection, the sale is already saved.
+  $('#pay-invoice').addEventListener('click', () => lastSaleId && POS.invoice.open(lastSaleId, {
+    onChange: inv => { $('#pay-invoice').innerHTML = `<i class="bi bi-receipt"></i>${inv.status === 'Vigente' ? 'Ver factura' : 'Facturar'}`; },
+  }));
 
   // ── Keyboard: F2 search, F9 pay ──
   document.addEventListener('keydown', e => {

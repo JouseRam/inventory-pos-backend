@@ -12,6 +12,8 @@ public static class PosModules
     public const string Customers = "Customers";
     public const string Suppliers = "Suppliers";
     public const string Reports = "Reports";
+    /// <summary>View: download invoices. Edit: issue and cancel them.</summary>
+    public const string Invoicing = "Invoicing";
     public const string Settings = "Settings";
     /// <summary>User administration is reserved to super admins and never granted per module.</summary>
     public const string Users = "Users";
@@ -28,6 +30,7 @@ public static class PosModules
         new(Purchases, "Compras", "bi-truck"),
         new(Customers, "Clientes", "bi-people"),
         new(Suppliers, "Proveedores", "bi-building"),
+        new(Invoicing, "Facturación", "bi-receipt"),
         new(Reports, "Reportes", "bi-graph-up"),
         new(Settings, "Configuración", "bi-gear"),
     ];

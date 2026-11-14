@@ -15,7 +15,8 @@ public record SatCatalogEntry(string Code, string Description, TaxpayerKind Appl
 
 public record SatCatalogDto(string Code, string Description, bool Individual, bool Company);
 
-public record SatCatalogsDto(IReadOnlyList<SatCatalogDto> TaxRegimes, IReadOnlyList<SatCatalogDto> CfdiUses);
+public record SatCatalogsDto(IReadOnlyList<SatCatalogDto> TaxRegimes, IReadOnlyList<SatCatalogDto> CfdiUses,
+    IReadOnlyList<SatCatalogDto> PaymentForms, IReadOnlyList<SatCatalogDto> CancelMotives);
 
 /// <summary>The SAT catalogs (CFDI 4.0) a customer's and the business's fiscal data are chosen from.</summary>
 public static class SatCatalogs
@@ -71,11 +72,40 @@ public static class SatCatalogs
         new("S01", "Sin efectos fiscales", TaxpayerKind.Both),
     ];
 
+    /// <summary>c_FormaPago a store receives at the counter; sales are paid in one exhibition (PUE), so 99 never applies.</summary>
+    public static readonly IReadOnlyList<SatCatalogEntry> PaymentForms =
+    [
+        new("01", "Efectivo", TaxpayerKind.Both),
+        new("02", "Cheque nominativo", TaxpayerKind.Both),
+        new("03", "Transferencia electrónica de fondos", TaxpayerKind.Both),
+        new("04", "Tarjeta de crédito", TaxpayerKind.Both),
+        new("28", "Tarjeta de débito", TaxpayerKind.Both),
+    ];
+
+    /// <summary>c_ClaveUnidad and its name for each unit the catalog uses.</summary>
+    public static (string Code, string Name) UnitFor(string unit) => unit switch
+    {
+        Domain.Constants.UnitsOfMeasure.Milliliter => ("MLT", "Mililitro"),
+        Domain.Constants.UnitsOfMeasure.Gram => ("GRM", "Gramo"),
+        Domain.Constants.UnitsOfMeasure.Liter => ("LTR", "Litro"),
+        Domain.Constants.UnitsOfMeasure.Kilogram => ("KGM", "Kilogramo"),
+        _ => ("H87", "Pieza"),
+    };
+
+    /// <summary>The form of payment that covered most of the sale.</summary>
+    public static string PaymentFormFor(string method) => method switch
+    {
+        Domain.Constants.PaymentMethods.Card => "04",
+        Domain.Constants.PaymentMethods.Transfer => "03",
+        _ => "01",
+    };
+
     public static SatCatalogsDto ToDto()
     {
         static SatCatalogDto Map(SatCatalogEntry e) =>
             new(e.Code, e.Description, e.AppliesTo.HasFlag(TaxpayerKind.Individual), e.AppliesTo.HasFlag(TaxpayerKind.Company));
-        return new SatCatalogsDto(TaxRegimes.Select(Map).ToList(), CfdiUses.Select(Map).ToList());
+        return new SatCatalogsDto(TaxRegimes.Select(Map).ToList(), CfdiUses.Select(Map).ToList(),
+            PaymentForms.Select(Map).ToList(), Invoicing.CancelMotives.All.Select(Map).ToList());
     }
 }
 
@@ -103,6 +133,12 @@ public static partial class FiscalRules
 
     public static bool IsValidTaxRegime(string? code, string? rfc = null) =>
         Fits(SatCatalogs.TaxRegimes, code, rfc);
+
+    [GeneratedRegex(@"^\d{8}$")]
+    private static partial Regex ProductCodePattern();
+
+    /// <summary>c_ClaveProdServ codes have 8 digits.</summary>
+    public static bool IsValidProductCode(string? code) => code != null && ProductCodePattern().IsMatch(code);
 
     public static bool IsValidCfdiUse(string? code, string? rfc = null) =>
         Fits(SatCatalogs.CfdiUses, code, rfc);

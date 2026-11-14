@@ -28,6 +28,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<SalePayment> SalePayments => Set<SalePayment>();
     public DbSet<CashSession> CashSessions => Set<CashSession>();
     public DbSet<CashMovement> CashMovements => Set<CashMovement>();
+    public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<InvoicingAccount> InvoicingAccounts => Set<InvoicingAccount>();
 
     // ── System ──
     public DbSet<Setting> Settings => Set<Setting>();

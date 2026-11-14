@@ -16,12 +16,47 @@
   <main class="page" id="page">
     <div class="tabs" role="tablist">
       <button role="tab" aria-selected="true" data-tab="business">Negocio</button>
+      <button role="tab" aria-selected="false" data-tab="invoicing">Facturación</button>
       <button role="tab" aria-selected="false" data-tab="printer">Impresora y respaldos</button>
       <button role="tab" aria-selected="false" data-tab="users" id="users-tab" hidden>Usuarios y permisos</button>
       <button role="tab" aria-selected="false" data-tab="sync">Sincronización</button>
     </div>
 
     <form data-panel="business" id="settings-form" style="display:grid;gap:20px"></form>
+
+    <section data-panel="invoicing" hidden style="display:grid;gap:20px">
+      <form class="panel" id="inv-account-form">
+        <header><h2>Cuenta del proveedor de facturación</h2><span id="inv-status"></span></header>
+        <div class="body form-grid">
+          <p class="muted span-all" style="margin:0">Cada computadora que factura se configura aquí. La contraseña se guarda cifrada y nunca se muestra.</p>
+          <label class="field"><span>Proveedor (PAC)</span><select name="provider" id="inv-provider"></select></label>
+          <label class="field"><span>Ambiente</span><select name="sandbox" id="inv-sandbox">
+            <option value="true">Pruebas (gratis, sin validez ante el SAT)</option><option value="false">Producción (facturas reales)</option></select></label>
+          <label class="field"><span>Usuario de la cuenta</span><input name="userName" maxlength="150" autocomplete="off" required></label>
+          <label class="field"><span>Contraseña de la cuenta</span><input name="password" type="password" maxlength="200" autocomplete="new-password" id="inv-password"></label>
+          <label class="field"><span>Clave SAT de producto por defecto</span><input name="defaultProductCode" maxlength="8" inputmode="numeric" class="mono" required
+            title="c_ClaveProdServ de 8 dígitos para los productos; 01010101 si no aplica una específica"></label>
+          <label class="field"><span>Serie de las facturas (opcional)</span><input name="serie" maxlength="25" class="mono" placeholder="Ej. F"></label>
+        </div>
+        <footer style="display:flex;gap:10px;padding:0 16px 16px">
+          <button class="btn primary" type="submit">Guardar cuenta</button>
+          <button class="btn" type="button" id="inv-verify"><i class="bi bi-plug"></i>Probar conexión</button>
+        </footer>
+      </form>
+
+      <form class="panel" id="inv-csd-form">
+        <header><h2>Certificado de sello digital (CSD)</h2></header>
+        <div class="body form-grid">
+          <div class="span-all" id="inv-csd-current"></div>
+          <p class="muted span-all" style="margin:0">Es el CSD que tramitas en el SAT (no la e.firma). Los archivos se envían al proveedor, que los guarda para sellar tus facturas; esta computadora no los conserva.</p>
+          <label class="field"><span>Certificado (.cer)</span><input type="file" name="certificate" accept=".cer" required></label>
+          <label class="field"><span>Llave privada (.key)</span><input type="file" name="privateKey" accept=".key" required></label>
+          <label class="field"><span>Contraseña de la llave privada</span><input type="password" name="password" autocomplete="off" required></label>
+        </div>
+        <footer style="padding:0 16px 16px"><button class="btn primary" type="submit"><i class="bi bi-upload"></i>Subir CSD al proveedor</button></footer>
+      </form>
+      <p class="muted" style="margin:0">El RFC, la razón social, el régimen fiscal y el código postal de expedición se capturan en la pestaña <a href="#business" data-goto="business">Negocio</a>.</p>
+    </section>
 
     <section data-panel="printer" hidden style="display:grid;gap:20px">
       <form class="panel" id="printer-form">
@@ -344,18 +379,76 @@
         try { await api.del('/sync/devices/' + b.dataset.revoke); toast('Caja revocada.'); await loadDevices(); } catch (err) { POS.fail(err); }
       });
 
+      // ── Invoicing: this computer's provider account and the CSD ──
+      async function loadInvoicing() {
+        const a = await api.get('/invoicing/account');
+        const f = $('#inv-account-form');
+        $('#inv-provider').innerHTML = a.providers.map(p => `<option ${p === a.provider ? 'selected' : ''}>${esc(p)}</option>`).join('');
+        f.elements.sandbox.value = String(a.sandbox);
+        f.elements.userName.value = a.userName || '';
+        f.elements.password.value = '';
+        f.elements.password.placeholder = a.passwordUnreadable ? 'Vuelve a capturarla' : a.hasPassword ? 'Guardada · escribe para cambiarla' : '';
+        f.elements.password.required = !a.hasPassword || a.passwordUnreadable;
+        f.elements.defaultProductCode.value = a.defaultProductCode || '01010101';
+        f.elements.serie.value = a.serie || '';
+        $('#inv-status').innerHTML = a.ready
+          ? `<span class="pill good">Lista para facturar${a.sandbox ? ' · pruebas' : ''}</span>`
+          : a.passwordUnreadable ? '<span class="pill crit">Contraseña ilegible</span>'
+          : !a.hasPassword ? '<span class="pill">Sin configurar</span>' : '<span class="pill warn">Falta el CSD</span>';
+        const soon = a.csdValidUntil && (new Date(a.csdValidUntil) - Date.now()) < 30 * 864e5;
+        $('#inv-csd-current').innerHTML = a.csdRfc
+          ? `<dl class="facts" style="margin:0"><dt>RFC</dt><dd class="mono">${esc(a.csdRfc)}</dd><dt>Número de certificado</dt><dd class="mono">${esc(a.csdCertificateNumber || '')}</dd>
+              <dt>Vigente hasta</dt><dd>${POS.fmt.date(a.csdValidUntil)} ${soon ? '<span class="pill warn">Vence pronto</span>' : ''}</dd><dt>Subido</dt><dd>${POS.fmt.dateTime(a.csdUploadedAt)}</dd></dl>`
+          : '<p style="margin:0">Aún no has subido el CSD.</p>';
+        const canEditInvoicing = session.can('Settings', true);
+        document.querySelectorAll('#inv-account-form input, #inv-account-form select, #inv-account-form button, #inv-csd-form input, #inv-csd-form button')
+          .forEach(el => { el.disabled = !canEditInvoicing; });
+        $('#inv-csd-form button[type=submit]').disabled = !canEditInvoicing || !a.hasPassword || a.passwordUnreadable;
+      }
+      $('#inv-account-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const f = e.target.elements;
+        try {
+          await api.put('/invoicing/account', {
+            provider: f.provider.value, sandbox: f.sandbox.value === 'true', userName: f.userName.value.trim(),
+            password: f.password.value || null, defaultProductCode: f.defaultProductCode.value.trim(), serie: f.serie.value.trim() || null,
+          });
+          toast('Cuenta de facturación guardada.');
+          await loadInvoicing();
+        } catch (err) { POS.fail(err); }
+      });
+      $('#inv-verify').addEventListener('click', async () => {
+        if (!navigator.onLine) { POS.fail(new Error('Sin conexión a internet: no se puede probar la cuenta.')); return; }
+        try { await api.post('/invoicing/account/verify'); toast('Conexión correcta con el proveedor.'); } catch (err) { POS.fail(err); }
+      });
+      $('#inv-csd-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        if (!navigator.onLine) { POS.fail(new Error('Sin conexión a internet: el CSD se sube al proveedor, necesitas estar conectado.')); return; }
+        const btn = e.submitter; btn.disabled = true;
+        try {
+          await api.upload('/invoicing/account/csd', new FormData(e.target));
+          e.target.reset();
+          toast('CSD subido al proveedor.');
+          await loadInvoicing();
+        } catch (err) { POS.fail(err); } finally { btn.disabled = false; }
+      });
+      document.querySelector('[data-goto="business"]').addEventListener('click', e => { e.preventDefault(); show('business'); });
+
       function show(tab) {
         $$('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
         $$('[data-panel]').forEach(p => { p.hidden = p.dataset.panel !== tab; });
         history.replaceState(null, '', '#' + tab);
-        ({ users: loadUsers, printer: loadPrinter, business: loadSettings, sync: loadSync })[tab]().catch(POS.fail);
+        ({ users: loadUsers, printer: loadPrinter, business: loadSettings, sync: loadSync, invoicing: loadInvoicing })[tab]().catch(POS.fail);
       }
       $('#users-tab').hidden = !isAdmin || POS.env.catalogLocked;
       // The web has no receipt printer and backs up through its database server.
       $('[data-tab="printer"]').hidden = POS.env.central;
       $$('[data-tab]').forEach(b => b.addEventListener('click', () => show(b.dataset.tab)));
       const requested = location.hash.slice(1);
-      show(requested === 'users' && isAdmin && !POS.env.catalogLocked ? 'users' : ['printer', 'sync'].includes(requested) ? requested : 'business');
+      // For now invoices are issued at the register, so the web does not configure an account.
+      $('[data-tab="invoicing"]').hidden = POS.env.central;
+      show(requested === 'users' && isAdmin && !POS.env.catalogLocked ? 'users'
+        : ['printer', 'sync'].includes(requested) || (requested === 'invoicing' && !POS.env.central) ? requested : 'business');
     });
   </script>
 </body>

@@ -66,3 +66,9 @@ public static class FolioSeries
     public const string Purchase = "Purchase";
     public const string CashSession = "CashSession";
 }
+
+public static class InvoiceStatus
+{
+    public const string Active = "Vigente";
+    public const string Cancelled = "Cancelada";
+}

@@ -1,4 +1,5 @@
 using InventoryPOS.Application.Common;
+using InventoryPOS.Application.Features.Invoicing;
 using InventoryPOS.Domain.Common;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +14,8 @@ public class ExceptionHandler(ILogger<ExceptionHandler> logger, IProblemDetailsS
         var (status, title) = exception switch
         {
             DomainException => (StatusCodes.Status400BadRequest, "Operación no válida"),
+            InvoicingOfflineException => (StatusCodes.Status503ServiceUnavailable, "Sin conexión"),
+            InvoicingException => (StatusCodes.Status422UnprocessableEntity, "Factura rechazada"),
             NotFoundException => (StatusCodes.Status404NotFound, "No encontrado"),
             ConflictException => (StatusCodes.Status409Conflict, "Conflicto"),
             ForbiddenException => (StatusCodes.Status403Forbidden, "Sin permiso"),

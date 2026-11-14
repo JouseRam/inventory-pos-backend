@@ -1,10 +1,12 @@
 using InventoryPOS.Application.Common;
+using InventoryPOS.Application.Features.Invoicing;
 using InventoryPOS.Application.Features.Printing;
 using InventoryPOS.Application.Features.Reports;
 using InventoryPOS.Application.Features.Sync;
 using InventoryPOS.Application.Features.Users;
 using InventoryPOS.Domain.Interfaces;
 using InventoryPOS.Infrastructure.Identity;
+using InventoryPOS.Infrastructure.Invoicing;
 using InventoryPOS.Infrastructure.Persistence;
 using InventoryPOS.Infrastructure.Persistence.Seed;
 using InventoryPOS.Infrastructure.Printing;
@@ -67,6 +69,11 @@ public static class DependencyInjection
         services.AddScoped<ISyncClient, SyncClient>();
         services.AddHttpClient(SyncClient.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(60));
         if (role == PosRole.Register) services.AddHostedService<SyncWorker>();
+
+        // ── Invoicing (CFDI): one implementation per provider; the account picks which one is used ──
+        services.AddSingleton<ISecretProtector, AesSecretProtector>();
+        services.AddScoped<IInvoiceProvider, FacturamaProvider>();
+        services.AddHttpClient(FacturamaProvider.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(60));
 
         services.AddScoped<DatabaseInitializer>();
         if (database.IsSqlite)

@@ -119,7 +119,36 @@
     }
     return data;
   }
+  /** Raw fetch with the session, for files: downloads (blob) and uploads (FormData). Errors read like request()'s. */
+  async function rawFetch(method, path, body) {
+    const headers = {};
+    if (session.token) headers.Authorization = 'Bearer ' + session.token;
+    let res;
+    try { res = await fetch('/api' + path, { method, headers, body }); }
+    catch { throw new ApiError('No hay conexión con el servidor. Revisa la red e intenta de nuevo.', 0); }
+    if (!res.ok) {
+      let data = null;
+      try { data = await res.json(); } catch { /* not JSON */ }
+      throw new ApiError(data?.detail || data?.title || `Error ${res.status}`, res.status);
+    }
+    return res;
+  }
+
+  /** Saves a file served by the API (e.g. an invoice PDF) under the given name. */
+  async function download(path, fileName) {
+    const blob = await (await rawFetch('GET', path)).blob();
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'), { href: url, download: fileName });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }
+
   const api = {
+    download,
+    upload: async (p, formData) => {
+      const res = await rawFetch('POST', p, formData);
+      return res.status === 204 ? null : res.json();
+    },
     get: p => request('GET', p),
     post: (p, b = {}) => request('POST', p, b),
     put: (p, b = {}) => request('PUT', p, b),

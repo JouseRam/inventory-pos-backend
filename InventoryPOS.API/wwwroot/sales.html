@@ -33,11 +33,13 @@
         <header><h2 id="detail-title">Venta</h2><button class="btn ghost icon-btn" value="cancel" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button></header>
         <div class="body" id="detail-body"></div>
         <footer><button class="btn danger" value="void" id="void-btn" type="button" style="margin-right:auto">Cancelar venta</button>
+          <button class="btn" id="invoice-btn" type="button" hidden><i class="bi bi-receipt"></i><span>Facturar</span></button>
           <button class="btn" id="print-btn" type="button" hidden><i class="bi bi-printer"></i>Reimprimir</button><button class="btn" value="cancel">Cerrar</button></footer>
       </form>
     </dialog>
   </main>
   <script src="js/core.js"></script>
+  <script src="js/invoice.js"></script>
   <script>
     POS.boot({ module: 'Sales', title: 'Ventas' }, async () => {
       const { api, session, fmt, esc, toast, fail, confirmBox, $ } = POS;
@@ -89,9 +91,18 @@
           ${s.cancelReason ? `<div class="form-error">Cancelada ${fmt.dateTime(s.cancelledAt)}: ${esc(s.cancelReason)}</div>` : ''}`;
         $('#void-btn').hidden = !canEdit || s.status === 'Cancelada';
         $('#print-btn').hidden = !printer.enabled || !canEdit;
+        // Invoicing: issued sales show their invoice; completed ones can be invoiced by whoever may issue.
+        const canInvoice = POS.session.can('Invoicing');
+        const invoice = canInvoice ? await api.get(`/invoices/by-sale/${s.id}`).catch(() => null) : null;
+        $('#invoice-btn').hidden = !canInvoice || (!invoice && (s.status === 'Cancelada' || !POS.session.can('Invoicing', true)));
+        $('#invoice-btn span').textContent = invoice ? 'Ver factura' : 'Facturar';
         $('#detail').showModal();
       }
       $('#list').addEventListener('click', e => { const r = e.target.closest('[data-id]'); if (r) show(r.dataset.id); });
+
+      $('#invoice-btn').addEventListener('click', () => POS.invoice.open(current.id, {
+        onChange: inv => { $('#invoice-btn span').textContent = inv.status === 'Vigente' ? 'Ver factura' : 'Facturar'; },
+      }));
 
       $('#print-btn').addEventListener('click', async () => {
         try { await api.post(`/printing/sales/${current.id}?reprint=true`); toast(`Ticket ${current.folio} reimpreso.`); } catch (err) { fail(err); }

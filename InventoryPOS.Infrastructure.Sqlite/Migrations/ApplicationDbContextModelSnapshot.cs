@@ -381,6 +381,164 @@ namespace InventoryPOS.Infrastructure.Sqlite.Migrations
                     b.ToTable("InventoryMovements", (string)null);
                 });
 
+            modelBuilder.Entity("InventoryPOS.Domain.Entities.Invoice", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CancelMotive")
+                        .HasMaxLength(2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CfdiUse")
+                        .IsRequired()
+                        .HasMaxLength(4)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PaymentForm")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("Pdf")
+                        .HasColumnType("BLOB");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProviderId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReceiverName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReceiverRfc")
+                        .IsRequired()
+                        .HasMaxLength(13)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SaleId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Sandbox")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("Uid")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Uuid")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Xml")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SaleId");
+
+                    b.HasIndex("Uid")
+                        .IsUnique();
+
+                    b.HasIndex("Uuid")
+                        .IsUnique();
+
+                    b.ToTable("Invoices", (string)null);
+                });
+
+            modelBuilder.Entity("InventoryPOS.Domain.Entities.InvoicingAccount", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CsdCertificateNumber")
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CsdRfc")
+                        .HasMaxLength(13)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CsdUploadedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CsdValidUntil")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DefaultProductCode")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProtectedPassword")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Sandbox")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Serie")
+                        .HasMaxLength(25)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("Uid")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Uid")
+                        .IsUnique();
+
+                    b.ToTable("InvoicingAccounts", (string)null);
+                });
+
             modelBuilder.Entity("InventoryPOS.Domain.Entities.Product", b =>
                 {
                     b.Property<int>("Id")
@@ -1384,6 +1542,17 @@ namespace InventoryPOS.Infrastructure.Sqlite.Migrations
                     b.Navigation("Batch");
 
                     b.Navigation("Variant");
+                });
+
+            modelBuilder.Entity("InventoryPOS.Domain.Entities.Invoice", b =>
+                {
+                    b.HasOne("InventoryPOS.Domain.Entities.Sale", "Sale")
+                        .WithMany()
+                        .HasForeignKey("SaleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Sale");
                 });
 
             modelBuilder.Entity("InventoryPOS.Domain.Entities.Product", b =>

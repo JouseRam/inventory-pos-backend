@@ -151,6 +151,14 @@ input[type="checkbox"] { width: auto; accent-color: var(--accent); }
 fieldset.fiscal { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px; margin: 4px 0 0; min-width: 0; }
 fieldset.fiscal legend { padding: 0 6px; font-weight: 600; font-size: .9rem; }
 fieldset.fiscal legend .muted { font-weight: 400; font-size: .8rem; }
+.notice { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface-2); color: var(--ink); margin-bottom: 12px; font-size: .9rem; }
+.notice.warn { background: var(--warn-soft); }
+.notice > i { color: var(--warn); font-size: 1.1rem; line-height: 1.3; }
+.notice ul { margin: 6px 0; padding-left: 18px; }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0 0 12px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.cancel-invoice summary { cursor: pointer; color: var(--crit); font-size: .9rem; }
 .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
 .toolbar .grow { flex: 1 1 220px; }
 
