@@ -1,4 +1,5 @@
 using InventoryPOS.Application.Common;
+using InventoryPOS.Application.Features.Invoicing;
 using InventoryPOS.Application.Features.Sync;
 using InventoryPOS.Domain.Common;
 using InventoryPOS.Domain.Entities;
@@ -205,7 +206,8 @@ public class CustomerService(IUnitOfWork uow)
     {
         var term = q?.Trim();
         var customers = await Repo.ListAsync(c => (includeInactive || c.IsActive) &&
-            (string.IsNullOrEmpty(term) || c.Name.Contains(term) || (c.Phone != null && c.Phone.Contains(term)) || (c.Email != null && c.Email.Contains(term))), ct);
+            (string.IsNullOrEmpty(term) || c.Name.Contains(term) || (c.Phone != null && c.Phone.Contains(term)) || (c.Email != null && c.Email.Contains(term)) ||
+            (c.TaxId != null && c.TaxId.Contains(term)) || (c.LegalName != null && c.LegalName.Contains(term))), ct);
         return customers.OrderBy(c => c.Name).Select(c => c.ToDto()).ToList();
     }
 
@@ -246,5 +248,10 @@ public class CustomerService(IUnitOfWork uow)
         c.Address = dto.Address?.Trim();
         c.Notes = dto.Notes?.Trim();
         c.IsActive = dto.IsActive;
+        c.TaxId = FiscalRules.Normalize(dto.TaxId);
+        c.LegalName = FiscalRules.Normalize(dto.LegalName);
+        c.TaxRegime = FiscalRules.Normalize(dto.TaxRegime);
+        c.TaxZipCode = FiscalRules.Normalize(dto.TaxZipCode);
+        c.CfdiUse = FiscalRules.Normalize(dto.CfdiUse);
     }
 }

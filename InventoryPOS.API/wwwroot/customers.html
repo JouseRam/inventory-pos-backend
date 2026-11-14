@@ -14,13 +14,17 @@
   <script src="js/crud.js"></script>
   <script>
     POS.boot({ module: 'Customers', title: 'Clientes' }, async () => {
-      const { esc, fmt, session } = POS;
-      await crud({
+      const { api, esc, fmt, session } = POS;
+      const sat = await api.get('/sat/catalogs');
+      const options = list => '<option value="">Elige…</option>' +
+        list.map(o => `<option value="${esc(o.code)}" data-individual="${o.individual}" data-company="${o.company}">${esc(o.code)} · ${esc(o.description)}</option>`).join('');
+      const page = crud({
         mount: document.getElementById('crud'), endpoint: '/customers', noun: 'cliente', canEdit: session.can('Customers', true),
         search: 'Nombre, teléfono o correo', emptyText: 'Aún no hay clientes. Agrega a las clientas frecuentes para guardar su tono habitual.',
         columns: [
           { label: 'Nombre', cell: r => `<b>${esc(r.name)}</b>` },
           { label: 'Teléfono', cell: r => `<span class="mono">${esc(r.phone || '')}</span>` },
+          { label: 'RFC', cell: r => r.taxId ? `<span class="mono">${esc(r.taxId)}</span>` : '<span class="muted">—</span>' },
           { label: 'Correo', cell: r => esc(r.email || '') },
           { label: 'Tono habitual y notas', cell: r => `<span class="muted">${esc(r.notes || '')}</span>` },
           { label: 'Alta', cell: r => fmt.date(r.createdAt) },
@@ -30,9 +34,34 @@
           <label class="field"><span>Teléfono</span><input name="phone" maxlength="30" inputmode="tel"></label>
           <label class="field"><span>Correo</span><input name="email" type="email" maxlength="150"></label>
           <label class="field span-all"><span>Dirección</span><input name="address" maxlength="300"></label>
-          <label class="field span-all"><span>Tono habitual, alergias, notas</span><textarea name="notes" rows="3" maxlength="1000" placeholder="Ej. 6.1 con oxidante 20 vol; sensible a amoniaco"></textarea></label>`,
+          <label class="field span-all"><span>Tono habitual, alergias, notas</span><textarea name="notes" rows="3" maxlength="1000" placeholder="Ej. 6.1 con oxidante 20 vol; sensible a amoniaco"></textarea></label>
+          <fieldset class="span-all fiscal">
+            <legend>Datos fiscales <span class="muted">(solo si la clienta pide factura; deben coincidir con su constancia del SAT)</span></legend>
+            <div class="form-grid">
+              <label class="field"><span>RFC</span><input name="taxId" maxlength="13" class="mono" autocapitalize="characters" placeholder="13 caracteres persona física, 12 moral"></label>
+              <label class="field"><span>Código postal fiscal</span><input name="taxZipCode" maxlength="5" inputmode="numeric" pattern="\\d{5}" class="mono"></label>
+              <label class="field span-all"><span>Nombre o razón social</span><input name="legalName" maxlength="300" placeholder="Sin régimen societario, ej. COMERCIALIZADORA LUNA"></label>
+              <label class="field span-all"><span>Régimen fiscal</span><select name="taxRegime">${options(sat.taxRegimes)}</select></label>
+              <label class="field span-all"><span>Uso del CFDI</span><select name="cfdiUse">${options(sat.cfdiUses)}</select></label>
+            </div>
+          </fieldset>`,
         deleteText: r => `Desactivar a ${r.name}. Su historial de compras se conserva.`,
-      }).load();
+      });
+
+      // Only offer the regimes and uses that fit the RFC typed (12 = persona moral, 13 = persona física).
+      const form = document.querySelector('#crud dialog form');
+      const rfc = form.elements.taxId;
+      const fitOptions = () => {
+        const value = rfc.value.trim().toUpperCase();
+        const kind = value.length === 12 ? 'company' : value.length === 13 ? 'individual' : null;
+        for (const sel of [form.elements.taxRegime, form.elements.cfdiUse]) {
+          for (const opt of sel.options) if (opt.value) opt.hidden = kind !== null && opt.dataset[kind] !== 'true';
+          if (sel.selectedOptions[0]?.hidden) sel.value = '';
+        }
+      };
+      rfc.addEventListener('input', () => { rfc.value = rfc.value.toUpperCase(); fitOptions(); });
+      new MutationObserver(() => { if (form.closest('dialog').open) fitOptions(); }).observe(form.closest('dialog'), { attributes: true, attributeFilter: ['open'] });
+      await page.load();
     });
   </script>
 </body>

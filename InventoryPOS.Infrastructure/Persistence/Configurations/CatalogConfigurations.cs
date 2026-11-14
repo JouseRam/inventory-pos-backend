@@ -50,6 +50,13 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         e.Property(x => x.Email).HasMaxLength(150);
         e.Property(x => x.Address).HasMaxLength(300);
         e.Property(x => x.Notes).HasMaxLength(1000);
+        e.Property(x => x.TaxId).HasMaxLength(13);
+        e.Property(x => x.LegalName).HasMaxLength(300);
+        e.Property(x => x.TaxRegime).HasMaxLength(3);
+        e.Property(x => x.TaxZipCode).HasMaxLength(5);
+        e.Property(x => x.CfdiUse).HasMaxLength(4);
+        e.Ignore(x => x.HasFiscalData);
         e.HasIndex(x => x.Phone);
+        e.HasIndex(x => x.TaxId);
     }
 }

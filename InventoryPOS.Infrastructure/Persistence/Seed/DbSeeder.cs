@@ -50,6 +50,9 @@ public class DbSeeder(ApplicationDbContext db, UserManager<AppUser> users, IConf
         EnsureSetting(SettingKeys.BusinessRfc, "RFC", "text", "Negocio", null);
         EnsureSetting(SettingKeys.BusinessAddress, "Dirección", "textarea", "Negocio", null);
         EnsureSetting(SettingKeys.BusinessPhone, "Teléfono", "text", "Negocio", null);
+        EnsureSetting(SettingKeys.BusinessLegalName, "Razón social (como aparece en la constancia del SAT)", "text", "Facturación", null);
+        EnsureSetting(SettingKeys.BusinessTaxRegime, "Régimen fiscal", "select:taxRegimes", "Facturación", null);
+        EnsureSetting(SettingKeys.BusinessZipCode, "Código postal de expedición", "text", "Facturación", null);
         EnsureSetting(SettingKeys.TaxRate, "IVA incluido en precios (%)", "number", "Ventas", "16");
         EnsureSetting(SettingKeys.TicketFooter, "Pie del ticket", "textarea", "Ventas", "¡Gracias por su compra!");
         EnsureSetting(SettingKeys.ExpirationWarningDays, "Avisar caducidad con anticipación (días)", "number", "Inventario", "60");

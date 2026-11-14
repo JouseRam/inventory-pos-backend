@@ -1,5 +1,6 @@
 using System.Globalization;
 using InventoryPOS.Application.Common;
+using InventoryPOS.Application.Features.Invoicing;
 using InventoryPOS.Application.Features.Sync;
 using InventoryPOS.Domain.Entities;
 using InventoryPOS.Domain.Interfaces;
@@ -15,6 +16,12 @@ public static class SettingKeys
     public const string BusinessRfc = "BusinessRfc";
     public const string BusinessAddress = "BusinessAddress";
     public const string BusinessPhone = "BusinessPhone";
+    /// <summary>Razón social as registered with the SAT (issuer of the CFDI).</summary>
+    public const string BusinessLegalName = "BusinessLegalName";
+    /// <summary>c_RegimenFiscal code of the business.</summary>
+    public const string BusinessTaxRegime = "BusinessTaxRegime";
+    /// <summary>Código postal of the place of issue (LugarExpedicion).</summary>
+    public const string BusinessZipCode = "BusinessZipCode";
     public const string TaxRate = "TaxRate";
     public const string TicketFooter = "TicketFooter";
     public const string ExpirationWarningDays = "ExpirationWarningDays";
@@ -52,11 +59,31 @@ public class SettingService(IUnitOfWork uow, PosGuard guard)
             if (setting.Type == "number" && !string.IsNullOrWhiteSpace(value) &&
                 !decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out _))
                 throw new Domain.Common.DomainException($"'{setting.Label}' debe ser numérico.");
-            setting.Value = value?.Trim();
+            setting.Value = FiscalValue(key, value) ?? value?.Trim();
             setting.UpdatedAt = DateTime.UtcNow;
         }
         await uow.SaveChangesAsync(ct);
         return await ListAsync(ct);
+    }
+
+    /// <summary>Validates and normalizes the fiscal settings; null for any other key.</summary>
+    private static string? FiscalValue(string key, string? value)
+    {
+        var normalized = FiscalRules.Normalize(value);
+        if (normalized == null) return null;
+        switch (key)
+        {
+            case SettingKeys.BusinessRfc when !FiscalRules.IsValidRfc(normalized):
+                throw new Domain.Common.DomainException("RFC del negocio inválido: 12 caracteres para persona moral o 13 para persona física.");
+            case SettingKeys.BusinessTaxRegime when !FiscalRules.IsValidTaxRegime(normalized):
+                throw new Domain.Common.DomainException("Elige un régimen fiscal del catálogo del SAT.");
+            case SettingKeys.BusinessZipCode when !FiscalRules.IsValidZip(normalized):
+                throw new Domain.Common.DomainException("El código postal de expedición debe tener 5 dígitos.");
+            case SettingKeys.BusinessRfc or SettingKeys.BusinessLegalName or SettingKeys.BusinessTaxRegime or SettingKeys.BusinessZipCode:
+                return normalized;
+            default:
+                return null;
+        }
     }
 
     public async Task<string?> GetAsync(string key, CancellationToken ct = default) =>

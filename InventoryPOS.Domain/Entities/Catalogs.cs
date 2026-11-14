@@ -44,5 +44,19 @@ public class Customer : BaseEntity
     public string? Notes { get; set; }
     public bool IsActive { get; set; } = true;
 
+    // ── Fiscal data (CFDI 4.0); empty when the customer does not invoice ──
+    /// <summary>RFC, uppercase: 12 characters for a persona moral, 13 for a persona física.</summary>
+    public string? TaxId { get; set; }
+    /// <summary>Name or razón social exactly as registered with the SAT.</summary>
+    public string? LegalName { get; set; }
+    /// <summary>c_RegimenFiscal code, e.g. 612.</summary>
+    public string? TaxRegime { get; set; }
+    /// <summary>Código postal of the fiscal address.</summary>
+    public string? TaxZipCode { get; set; }
+    /// <summary>Default c_UsoCFDI code, e.g. G03.</summary>
+    public string? CfdiUse { get; set; }
+
+    public bool HasFiscalData => !string.IsNullOrEmpty(TaxId);
+
     public ICollection<Sale> Sales { get; set; } = [];
 }

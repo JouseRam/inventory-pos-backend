@@ -148,6 +148,9 @@ input[type="checkbox"] { width: auto; accent-color: var(--accent); }
 .check { display: inline-flex; gap: 8px; align-items: center; font-size: .9rem; }
 .form-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 .form-grid .span-all { grid-column: 1 / -1; }
+fieldset.fiscal { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px; margin: 4px 0 0; min-width: 0; }
+fieldset.fiscal legend { padding: 0 6px; font-weight: 600; font-size: .9rem; }
+fieldset.fiscal legend .muted { font-weight: 400; font-size: .8rem; }
 .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
 .toolbar .grow { flex: 1 1 220px; }
 

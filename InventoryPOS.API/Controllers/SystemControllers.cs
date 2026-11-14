@@ -1,5 +1,6 @@
 using InventoryPOS.API.Authorization;
 using InventoryPOS.Application.Common;
+using InventoryPOS.Application.Features.Invoicing;
 using InventoryPOS.Application.Features.Reports;
 using InventoryPOS.Application.Features.Settings;
 using InventoryPOS.Application.Features.Users;
@@ -53,6 +54,15 @@ public class UsersController(IIdentityService identity) : ControllerBase
     [HttpPut("{id}/permissions")]
     public Task<UserDto> SetPermissions(string id, List<ModulePermissionDto> permissions, CancellationToken ct) =>
         identity.SetPermissionsAsync(id, permissions, ct);
+}
+
+/// <summary>SAT catalogs for the fiscal data forms; any signed-in user can read them.</summary>
+[ApiController]
+[Route("api/sat")]
+public class SatController : ControllerBase
+{
+    [HttpGet("catalogs")]
+    public SatCatalogsDto Catalogs() => SatCatalogs.ToDto();
 }
 
 [ApiController]

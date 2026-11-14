@@ -114,14 +114,24 @@
 
       // ── Business settings, grouped as the seeder defines them ──
       async function loadSettings() {
-        const list = (await api.get('/settings')).filter(s => s.group !== 'Impresora');
-        const groups = [...new Set(list.map(s => s.group))];
+        const [all, sat] = await Promise.all([api.get('/settings'), api.get('/sat/catalogs')]);
+        const list = all.filter(s => s.group !== 'Impresora');
+        const order = ['Negocio', 'Facturación', 'Ventas', 'Inventario'];
+        const rank = g => (order.indexOf(g) + 1) || order.length + 1;
+        const groups = [...new Set(list.map(s => s.group))].sort((a, b) => rank(a) - rank(b));
+        // "select:<catalog>" settings pick a code from a SAT catalog.
+        const select = s => {
+          const options = sat[s.type.slice('select:'.length)] || [];
+          return `<select name="${esc(s.key)}" ${canEditBusiness ? '' : 'disabled'}><option value="">Sin definir</option>
+            ${options.map(o => `<option value="${esc(o.code)}" ${o.code === s.value ? 'selected' : ''}>${esc(o.code)} · ${esc(o.description)}</option>`).join('')}</select>`;
+        };
         $('#settings-form').innerHTML = groups.map(g => `
           <section class="panel"><header><h2>${esc(g)}</h2></header><div class="body form-grid">
             ${list.filter(s => s.group === g).map(s => `<label class="field ${s.type === 'textarea' ? 'span-all' : ''}"><span>${esc(s.label)}</span>
-              ${s.type === 'textarea' ? `<textarea name="${esc(s.key)}" rows="2" ${canEditBusiness ? '' : 'disabled'}>${esc(s.value || '')}</textarea>`
+              ${s.type.startsWith('select:') ? select(s)
+                : s.type === 'textarea' ? `<textarea name="${esc(s.key)}" rows="2" ${canEditBusiness ? '' : 'disabled'}>${esc(s.value || '')}</textarea>`
                 : `<input name="${esc(s.key)}" value="${esc(s.value || '')}" ${s.type === 'number' ? 'type="number" step="any"' : ''} ${canEditBusiness ? '' : 'disabled'}>`}</label>`).join('')}
-          </div></section>`).join('') + (canEditBusiness ? '<div><button class="btn primary" type="submit">Guardar configuración</button></div>'
+          </div>${g === 'Facturación' ? '<p class="muted" style="margin:0 16px 16px">Estos datos deben coincidir con tu constancia de situación fiscal. El RFC se captura en “Negocio”.</p>' : ''}</section>`).join('') + (canEditBusiness ? '<div><button class="btn primary" type="submit">Guardar configuración</button></div>'
             : POS.env.catalogLocked ? '<p class="muted" style="margin:0"><i class="bi bi-cloud-check"></i> Los datos del negocio se administran en la web.</p>' : '');
       }
       $('#settings-form').addEventListener('submit', async e => {

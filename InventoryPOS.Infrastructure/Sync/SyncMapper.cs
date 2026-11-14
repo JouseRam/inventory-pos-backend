@@ -37,7 +37,8 @@ public class SyncMapper(ApplicationDbContext db)
     {
         var query = db.Customers.AsNoTracking().Where(Changed<Customer>(since));
         if (uids != null) query = query.Where(c => uids.Contains(c.Uid));
-        return await query.Select(c => new CustomerSync(c.Uid, c.Name, c.Phone, c.Email, c.Address, c.Notes, c.IsActive, c.CreatedAt, c.UpdatedAt))
+        return await query.Select(c => new CustomerSync(c.Uid, c.Name, c.Phone, c.Email, c.Address, c.Notes, c.IsActive, c.CreatedAt, c.UpdatedAt,
+                true, c.TaxId, c.LegalName, c.TaxRegime, c.TaxZipCode, c.CfdiUse))
             .ToListAsync(ct);
     }
 

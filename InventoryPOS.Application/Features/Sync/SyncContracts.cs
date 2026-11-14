@@ -19,8 +19,15 @@ public static class SyncTypes
 public record BrandSync(Guid Uid, string Name, bool IsActive);
 public record CategorySync(Guid Uid, string Name, string? Description, Guid? ParentUid, bool IsActive);
 public record SupplierSync(Guid Uid, string Name, string? ContactName, string? Phone, string? Email, string? Address, bool IsActive);
+/// <remarks>
+/// Fiscal fields are optional so a register and a central web on different versions still sync.
+/// <see cref="CarriesFiscalData"/> tells a sender that knows them apart from an older one, so an older
+/// sender never wipes the fiscal data it does not know about.
+/// </remarks>
 public record CustomerSync(Guid Uid, string Name, string? Phone, string? Email, string? Address, string? Notes, bool IsActive,
-    DateTime CreatedAt, DateTime? UpdatedAt);
+    DateTime CreatedAt, DateTime? UpdatedAt,
+    bool CarriesFiscalData = false, string? TaxId = null, string? LegalName = null, string? TaxRegime = null,
+    string? TaxZipCode = null, string? CfdiUse = null);
 public record ProductSync(Guid Uid, string Name, string? Description, Guid? BrandUid, Guid? CategoryUid, Guid? SupplierUid,
     bool TracksBatches, bool IsActive);
 /// <summary>Catalog data of a variant; stock is owned by the register and travels separately.</summary>

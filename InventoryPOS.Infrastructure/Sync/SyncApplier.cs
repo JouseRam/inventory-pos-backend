@@ -81,6 +81,11 @@ public class SyncApplier(ApplicationDbContext db, ILookupNormalizer normalizer)
             if (entity == null) db.Customers.Add(entity = new Customer { Uid = c.Uid, CreatedAt = c.CreatedAt });
             entity.Name = c.Name; entity.Phone = c.Phone; entity.Email = c.Email; entity.Address = c.Address; entity.Notes = c.Notes;
             entity.IsActive = c.IsActive;
+            if (c.CarriesFiscalData)
+            {
+                entity.TaxId = c.TaxId; entity.LegalName = c.LegalName; entity.TaxRegime = c.TaxRegime;
+                entity.TaxZipCode = c.TaxZipCode; entity.CfdiUse = c.CfdiUse;
+            }
         }
         await db.SaveChangesAsync(ct);
     }
