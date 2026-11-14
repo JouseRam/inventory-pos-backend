@@ -170,6 +170,24 @@ fieldset.fiscal legend .muted { font-weight: 400; font-size: .8rem; }
 .provider-card .plans small { grid-column: 1 / -1; }
 .provider-card .actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .provider-card .actions a.btn { text-decoration: none; }
+.manual-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+.manual-card .body { display: grid; gap: 10px; padding: 16px; height: 100%; align-content: start; }
+.manual-card header { display: flex; align-items: center; gap: 10px; }
+.manual-card header i { font-size: 1.3rem; color: var(--accent); }
+.manual-card h3 { margin: 0; flex: 1; font-size: 1rem; }
+.manual-card p { margin: 0; font-size: .9rem; }
+.manual-card .actions, .manual-hero .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.manual-card a.btn, .manual-hero a.btn, .viewer a.btn { text-decoration: none; }
+.manual-hero { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 16px; }
+.manual-hero > i { font-size: 2rem; color: var(--accent); }
+.manual-hero > div:nth-child(2) { flex: 1; min-width: 200px; }
+.manual-hero h2 { margin: 0; }
+.manual-hero p { margin: 4px 0 0; }
+dialog.viewer { width: min(1100px, 96vw); height: 92vh; padding: 0; }
+dialog.viewer form { display: flex; flex-direction: column; height: 100%; }
+dialog.viewer header { display: flex; align-items: center; gap: 8px; }
+dialog.viewer header h2 { flex: 1; }
+dialog.viewer iframe { flex: 1; width: 100%; border: 0; background: var(--surface-2); }
 .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
 .toolbar .grow { flex: 1 1 220px; }
 

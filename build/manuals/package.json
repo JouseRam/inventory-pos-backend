@@ -1,0 +1,12 @@
+{
+  "name": "matiz-pos-manuals",
+  "private": true,
+  "description": "Genera los manuales de usuario en PDF (docs/manual/*.md) con capturas reales de la app.",
+  "scripts": {
+    "manuals": "node generate.cjs"
+  },
+  "devDependencies": {
+    "marked": "15.0.12",
+    "playwright": "1.63.0"
+  }
+}

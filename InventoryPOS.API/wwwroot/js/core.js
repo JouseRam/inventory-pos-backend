@@ -280,12 +280,14 @@
     ] },
     { group: 'Sistema', items: [
       { href: 'settings.html', label: 'Configuración', icon: 'bi-sliders', module: 'Settings' },
+      { href: 'documentation.html', label: 'Documentación', icon: 'bi-journal-text' },
     ] },
   ];
 
   /** Installation role from /api/sync/status: the web (Central) does not sell; a paired register does not administer. */
   const env = { role: 'Register', paired: false, central: false, catalogLocked: false, status: null };
-  const visible = i => session.can(i.module) && !(env.central && i.register);
+  // Items without a module (the documentation) are open to every signed-in user.
+  const visible = i => (!i.module || session.can(i.module)) && !(env.central && i.register);
 
   function firstAllowedPage() {
     for (const g of NAV) for (const i of g.items) if (visible(i)) return i.href;

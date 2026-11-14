@@ -33,14 +33,32 @@ dotnet test
 
 ## Facturación electrónica (CFDI 4.0)
 
-Las facturas se emiten desde la caja con un PAC. Hoy está integrado **Facturama** (API Multiemisor);
-otro proveedor se agrega implementando `IInvoiceProvider` y registrándolo en `InventoryPOS.Infrastructure/DependencyInjection.cs`.
+Las facturas se emiten desde la caja con un PAC. Están integrados **Facturama** (API Multiemisor) y **Facturapi**;
+el usuario elige y cambia de proveedor en Configuración → Facturación (cada uno guarda su cuenta, y las facturas
+emitidas se siguen descargando y cancelando con el proveedor que las timbró). Cada tarjeta enlaza a la página de pago
+del proveedor; el pago se hace en su sitio. Otro proveedor se agrega implementando `IInvoiceProvider` (con su `ProviderInfo`)
+y registrándolo en `InventoryPOS.Infrastructure/DependencyInjection.cs`.
 
 1. **Configuración → Negocio:** RFC, razón social, régimen fiscal y código postal de expedición.
-2. **Configuración → Facturación:** proveedor, ambiente (pruebas o producción), usuario y contraseña de la cuenta,
-   y el CSD (.cer, .key y su contraseña). La contraseña se guarda cifrada con la llave `Jwt:Key` de la instalación;
+2. **Configuración → Facturación:** proveedor, ambiente (pruebas o producción), credenciales de la cuenta
+   y el CSD (.cer, .key y su contraseña; en Facturapi se sube en su panel). La contraseña se guarda cifrada con la llave `Jwt:Key` de la instalación;
    el CSD se envía al proveedor y no se guarda en la base de datos.
 3. **Permisos:** el módulo *Facturación* (ver = descargar, editar = timbrar y cancelar).
 
 En el punto de venta, al cobrar aparece **Facturar**; también desde **Ventas → detalle**. Sin internet se avisa y no se timbra.
 En `Development` la API arranca como caja (`Pos:Role=Register`) para poder vender y facturar con F5.
+
+## Manuales de usuario (módulo Documentación)
+
+Los manuales en PDF están en `InventoryPOS.API/wwwroot/docs/manuals/` y se consultan en **Sistema → Documentación**
+(también sin internet; la caja de escritorio los incluye). El texto vive en `docs/manual/*.md`, uno por módulo.
+
+Para regenerarlos después de cambiar el texto o las pantallas (toma capturas reales de la app):
+
+```
+dotnet run --project InventoryPOS.API --launch-profile http -- --ConnectionStrings:Sqlite="Data Source=App_Data/manuals.db" --Database:BackupDirectory=App_Data/backups
+cd build/manuals && npm install && npx playwright install chromium
+npm run manuals
+```
+
+Usa una base de datos vacía: el script crea un administrador de demostración y datos de ejemplo.

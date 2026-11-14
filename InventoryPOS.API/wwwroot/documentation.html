@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Documentación · Matiz</title>
+  <link rel="stylesheet" href="vendor/fonts.css">
+  <link rel="stylesheet" href="vendor/icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="page" id="page">
+    <div class="toolbar" style="margin-bottom:16px">
+      <label class="field grow"><span>Buscar un manual</span><input type="search" id="q" placeholder="Ej. corte de caja, factura, tono…"></label>
+      <label class="check"><input type="checkbox" id="all"> Mostrar también los módulos a los que no tengo acceso</label>
+    </div>
+
+    <section class="panel" id="complete" hidden></section>
+    <div class="manual-grid" id="manuals" style="margin-top:16px"></div>
+
+    <dialog id="viewer" class="viewer" aria-labelledby="viewer-title">
+      <form method="dialog">
+        <header><h2 id="viewer-title">Manual</h2>
+          <a class="btn sm" id="viewer-download" download><i class="bi bi-download"></i>Descargar</a>
+          <a class="btn sm" id="viewer-open" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i>Abrir aparte</a>
+          <button class="btn ghost icon-btn" value="cancel" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button></header>
+        <iframe id="viewer-frame" title="Manual en PDF"></iframe>
+      </form>
+    </dialog>
+  </main>
+  <script src="js/core.js"></script>
+  <script>
+    POS.boot({ title: 'Documentación' }, async () => {
+      const { esc, session, $ } = POS;
+      const base = 'docs/manuals/';
+      let index;
+      try {
+        const res = await fetch(base + 'manuals.json', { cache: 'no-cache' });
+        if (!res.ok) throw new Error();
+        index = await res.json();
+      } catch {
+        $('#manuals').innerHTML = '<div class="panel empty">Los manuales aún no se han generado en esta instalación.</div>';
+        return;
+      }
+
+      const kb = bytes => bytes > 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
+      const allowed = m => !m.module || session.can(m.module);
+      const complete = index.manuals.find(m => m.complete);
+      const manuals = index.manuals.filter(m => !m.complete);
+
+      if (complete) {
+        $('#complete').hidden = false;
+        $('#complete').innerHTML = `<div class="body manual-hero">
+          <i class="bi bi-book"></i>
+          <div><h2>${esc(complete.title)}</h2><p class="muted">${esc(complete.summary)} · PDF ${kb(complete.size)}</p></div>
+          <div class="actions"><button class="btn primary" type="button" data-read="${esc(complete.file)}" data-title="${esc(complete.title)}"><i class="bi bi-eye"></i>Leer</button>
+            <a class="btn" href="${base + esc(complete.file)}" download><i class="bi bi-download"></i>Descargar</a></div></div>`;
+      }
+
+      function render() {
+        const q = $('#q').value.trim().toLowerCase();
+        const showAll = $('#all').checked;
+        const list = manuals.filter(m => (showAll || allowed(m)) && (!q || `${m.title} ${m.summary}`.toLowerCase().includes(q)));
+        $('#manuals').innerHTML = list.length ? list.map(m => `
+          <article class="panel manual-card">
+            <div class="body">
+              <header><i class="bi ${esc(m.icon || 'bi-file-earmark-text')}"></i><h3>${esc(m.title)}</h3>${allowed(m) ? '' : '<span class="pill">Sin acceso</span>'}</header>
+              <p class="muted">${esc(m.summary)}</p>
+              <div class="actions">
+                <button class="btn sm primary" type="button" data-read="${esc(m.file)}" data-title="${esc(m.title)}"><i class="bi bi-eye"></i>Leer</button>
+                <a class="btn sm" href="${base + esc(m.file)}" download><i class="bi bi-download"></i>PDF · ${kb(m.size)}</a>
+              </div>
+            </div>
+          </article>`).join('')
+          : '<div class="panel empty" style="grid-column:1/-1">Ningún manual coincide con la búsqueda.</div>';
+      }
+
+      // Phones open the PDF on their own viewer; larger screens read it here.
+      document.addEventListener('click', e => {
+        const b = e.target.closest('[data-read]');
+        if (!b) return;
+        const url = base + b.dataset.read;
+        if (matchMedia('(max-width: 720px)').matches) { window.open(url, '_blank', 'noopener'); return; }
+        $('#viewer-title').textContent = b.dataset.title;
+        $('#viewer-frame').src = url;
+        $('#viewer-download').href = url;
+        $('#viewer-open').href = url;
+        $('#viewer').showModal();
+      });
+      $('#viewer').addEventListener('close', () => { $('#viewer-frame').src = 'about:blank'; });
+      $('#q').addEventListener('input', render);
+      $('#all').addEventListener('change', render);
+      render();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+{
+  "generatedAt": "2026-11-14T22:26:11.259Z",
+  "manuals": [
+    {
+      "slug": "primeros-pasos",
+      "title": "Primeros pasos",
+      "module": null,
+      "icon": "bi-flag",
+      "summary": "Qué es Matiz POS, cómo entrar, cómo se organiza el menú y qué hacer el primer día.",
+      "file": "00-primeros-pasos.pdf",
+      "size": 385879
+    },
+    {
+      "slug": "punto-de-venta",
+      "title": "Punto de venta",
+      "module": "Sales",
+      "icon": "bi-upc-scan",
+      "summary": "Buscar tonos, armar el ticket, cobrar con efectivo, tarjeta o transferencia, imprimir y facturar.",
+      "file": "01-punto-de-venta.pdf",
+      "size": 389103
+    },
+    {
+      "slug": "caja",
+      "title": "Caja",
+      "module": "CashRegister",
+      "icon": "bi-cash-coin",
+      "summary": "Abrir la caja con su fondo, registrar entradas y retiros de efectivo y hacer el corte al final del turno.",
+      "file": "02-caja.pdf",
+      "size": 263613
+    },
+    {
+      "slug": "ventas",
+      "title": "Ventas",
+      "module": "Sales",
+      "icon": "bi-receipt-cutoff",
+      "summary": "Consultar el historial de ventas, ver el detalle de un ticket, reimprimirlo, cancelarlo o facturarlo.",
+      "file": "03-ventas.pdf",
+      "size": 340210
+    },
+    {
+      "slug": "facturacion",
+      "title": "Facturación",
+      "module": "Invoicing",
+      "icon": "bi-receipt",
+      "summary": "Timbrar facturas CFDI 4.0 desde la caja, descargarlas, cancelarlas y configurar, pagar o cambiar el proveedor.",
+      "file": "04-facturacion.pdf",
+      "size": 588756
+    },
+    {
+      "slug": "productos",
+      "title": "Productos",
+      "module": "Products",
+      "icon": "bi-palette",
+      "summary": "Dar de alta productos con sus tonos y presentaciones, precios, costos, mínimos y control por lote y caducidad.",
+      "file": "05-productos.pdf",
+      "size": 440219
+    },
+    {
+      "slug": "existencias",
+      "title": "Existencias",
+      "module": "Inventory",
+      "icon": "bi-box-seam",
+      "summary": "Ver lo que hay que resurtir, los lotes por caducar y el kardex de movimientos, y ajustar existencias.",
+      "file": "06-existencias.pdf",
+      "size": 207914
+    },
+    {
+      "slug": "recepciones",
+      "title": "Recepciones",
+      "module": "Purchases",
+      "icon": "bi-truck",
+      "summary": "Capturar la mercancía que llega del proveedor con su costo, lote y caducidad.",
+      "file": "07-recepciones.pdf",
+      "size": 188390
+    },
+    {
+      "slug": "categorias-y-marcas",
+      "title": "Categorías y marcas",
+      "module": "Products",
+      "icon": "bi-tags",
+      "summary": "Organizar el catálogo por categorías (con subcategorías) y marcas.",
+      "file": "08-categorias-y-marcas.pdf",
+      "size": 114564
+    },
+    {
+      "slug": "clientes",
+      "title": "Clientes",
+      "module": "Customers",
+      "icon": "bi-person-heart",
+      "summary": "Guardar a las clientas frecuentes, su tono habitual y sus datos fiscales para facturar.",
+      "file": "09-clientes.pdf",
+      "size": 350412
+    },
+    {
+      "slug": "proveedores",
+      "title": "Proveedores",
+      "module": "Suppliers",
+      "icon": "bi-building",
+      "summary": "Registrar a los proveedores para asignarlos a los productos y a las recepciones.",
+      "file": "10-proveedores.pdf",
+      "size": 160701
+    },
+    {
+      "slug": "resumen-del-dia",
+      "title": "Resumen del día",
+      "module": "Dashboard",
+      "icon": "bi-speedometer2",
+      "summary": "Ver de un vistazo lo vendido hoy, en la semana y en el mes, lo que falta y lo que caduca.",
+      "file": "11-resumen-del-dia.pdf",
+      "size": 269237
+    },
+    {
+      "slug": "reportes",
+      "title": "Reportes",
+      "module": "Reports",
+      "icon": "bi-graph-up",
+      "summary": "Analizar la venta, la utilidad, las formas de pago y lo más vendido por producto, marca y categoría.",
+      "file": "12-reportes.pdf",
+      "size": 235104
+    },
+    {
+      "slug": "configuracion",
+      "title": "Configuración",
+      "module": "Settings",
+      "icon": "bi-sliders",
+      "summary": "Datos del negocio, facturación, impresora, respaldos, usuarios y permisos, y la vinculación con la web.",
+      "file": "13-configuracion.pdf",
+      "size": 612631
+    },
+    {
+      "slug": "documentacion",
+      "title": "Documentación",
+      "module": null,
+      "icon": "bi-journal-text",
+      "summary": "Dónde encontrar, leer y descargar estos manuales desde el sistema.",
+      "file": "14-documentacion.pdf",
+      "size": 287784
+    },
+    {
+      "slug": "completo",
+      "title": "Manual completo",
+      "module": null,
+      "icon": "bi-book",
+      "summary": "Todos los manuales en un solo documento, con índice.",
+      "file": "manual-completo.pdf",
+      "size": 3306371,
+      "complete": true
+    }
+  ]
+}
