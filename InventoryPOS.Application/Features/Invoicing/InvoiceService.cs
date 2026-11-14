@@ -68,7 +68,7 @@ public class InvoiceService(
     {
         var sale = await uow.Sales.GetWithDetailsAsync(saleId, ct) ?? throw NotFoundException.For("Venta", saleId);
         var invoice = await Invoices.FirstOrDefaultAsync(i => i.SaleId == saleId && i.Status == InvoiceStatus.Active, ct);
-        var account = await accounts.GetAsync(ct);
+        var account = await accounts.GetAsync(null, ct);
         var c = sale.Customer;
         return new InvoiceDraftDto(sale.Id, sale.Folio, sale.Total, c?.Id, c?.Name, c?.TaxId, c?.LegalName, c?.TaxRegime, c?.TaxZipCode,
             c?.CfdiUse, MainPaymentForm(sale), invoice == null ? null : ToDto(invoice, sale.Folio),
@@ -93,10 +93,10 @@ public class InvoiceService(
         if (await Invoices.AnyAsync(i => i.SaleId == saleId && i.Status == InvoiceStatus.Active, ct))
             throw new DomainException("Esta venta ya está facturada.");
 
-        var accountDto = await accounts.GetAsync(ct);
+        var accountDto = await accounts.GetAsync(null, ct);
         var missing = await MissingSetupAsync(accountDto, ct);
         if (missing.Count > 0) throw new DomainException("Falta configurar la facturación: " + string.Join("; ", missing) + ".");
-        var (account, provider, credentials) = await accounts.RequireCredentialsAsync(ct);
+        var (account, provider, credentials) = await accounts.RequireCredentialsAsync(null, ct);
 
         var receiver = new CfdiParty(FiscalRules.Normalize(dto.TaxId)!, FiscalRules.Normalize(dto.LegalName)!, dto.TaxRegime.Trim(), dto.TaxZipCode.Trim());
         var cfdiUse = FiscalRules.Normalize(dto.CfdiUse)!;
@@ -140,7 +140,7 @@ public class InvoiceService(
         var stored = format == CfdiFileFormat.Pdf ? invoice.Pdf : invoice.Xml is null ? null : System.Text.Encoding.UTF8.GetBytes(invoice.Xml);
         if (stored == null)
         {
-            var (_, provider, credentials) = await accounts.RequireCredentialsAsync(ct);
+            var (_, provider, credentials) = await accounts.RequireCredentialsAsync(invoice.Provider, ct);
             stored = await provider.DownloadAsync(credentials, invoice.ProviderId, format, ct);
             if (format == CfdiFileFormat.Pdf) invoice.Pdf = stored;
             else invoice.Xml = System.Text.Encoding.UTF8.GetString(stored);
@@ -158,7 +158,7 @@ public class InvoiceService(
     {
         var invoice = await Invoices.GetByIdAsync(invoiceId, ct) ?? throw NotFoundException.For("Factura", invoiceId);
         if (invoice.Status == InvoiceStatus.Cancelled) throw new DomainException("La factura ya está cancelada.");
-        var (_, provider, credentials) = await accounts.RequireCredentialsAsync(ct);
+        var (_, provider, credentials) = await accounts.RequireCredentialsAsync(invoice.Provider, ct);
 
         var outcome = await provider.CancelAsync(credentials, invoice.ProviderId, dto.Motive, dto.ReplacementUuid?.Trim(), ct);
         string message;
@@ -223,8 +223,8 @@ public class InvoiceService(
         if (string.IsNullOrEmpty(await settings.GetAsync(SettingKeys.BusinessLegalName, ct))) missing.Add("razón social del negocio");
         if (string.IsNullOrEmpty(await settings.GetAsync(SettingKeys.BusinessTaxRegime, ct))) missing.Add("régimen fiscal del negocio");
         if (string.IsNullOrEmpty(await settings.GetAsync(SettingKeys.BusinessZipCode, ct))) missing.Add("código postal de expedición");
-        if (!account.HasPassword || account.PasswordUnreadable) missing.Add("cuenta del proveedor de facturación");
-        else if (account.CsdRfc == null) missing.Add("certificado de sello digital (CSD)");
+        if (!account.Active || !account.HasPassword || account.PasswordUnreadable) missing.Add("cuenta del proveedor de facturación");
+        else if (!account.CsdReady) missing.Add("certificado de sello digital (CSD)");
         return missing;
     }
 

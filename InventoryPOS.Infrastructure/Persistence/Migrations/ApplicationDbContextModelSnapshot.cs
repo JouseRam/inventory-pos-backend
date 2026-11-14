@@ -528,6 +528,9 @@ namespace InventoryPOS.Infrastructure.Persistence.Migrations
                         .HasMaxLength(8)
                         .HasColumnType("nvarchar(8)");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
                     b.Property<string>("ProtectedPassword")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");

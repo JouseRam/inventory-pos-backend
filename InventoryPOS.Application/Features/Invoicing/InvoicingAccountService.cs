@@ -9,10 +9,15 @@ using InventoryPOS.Domain.Interfaces;
 
 namespace InventoryPOS.Application.Features.Invoicing;
 
+/// <summary>One saved account per provider; switching keeps the others, so their invoices can still be downloaded and cancelled.</summary>
+public record ProviderAccountSummary(string Provider, bool Active, bool Sandbox, bool Ready);
+
+/// <summary>The account of one provider (the active one unless another was asked for), plus every provider available.</summary>
 public record InvoicingAccountDto(
-    string? Provider, IReadOnlyList<string> Providers, bool Sandbox, string? UserName, bool HasPassword, bool PasswordUnreadable,
+    string Provider, bool Active, string? ActiveProvider, IReadOnlyList<ProviderInfo> Providers, IReadOnlyList<ProviderAccountSummary> Accounts,
+    bool Sandbox, string? UserName, bool HasPassword, bool PasswordUnreadable,
     string DefaultProductCode, string? Serie,
-    string? CsdRfc, string? CsdCertificateNumber, DateTime? CsdValidUntil, DateTime? CsdUploadedAt, bool Ready);
+    string? CsdRfc, string? CsdCertificateNumber, DateTime? CsdValidUntil, DateTime? CsdUploadedAt, bool CsdReady, bool Ready);
 
 /// <summary>Password null keeps the stored one.</summary>
 public record InvoicingAccountSaveDto(string Provider, bool Sandbox, string UserName, string? Password, string DefaultProductCode, string? Serie);
@@ -22,7 +27,7 @@ public class InvoicingAccountSaveValidator : AbstractValidator<InvoicingAccountS
     public InvoicingAccountSaveValidator()
     {
         RuleFor(x => x.Provider).NotEmpty().WithMessage("Elige el proveedor de facturación.");
-        RuleFor(x => x.UserName).NotEmpty().WithMessage("Captura el usuario de la cuenta del proveedor.").MaximumLength(150);
+        RuleFor(x => x.UserName).MaximumLength(150);
         RuleFor(x => x.Password).MaximumLength(200);
         RuleFor(x => x.DefaultProductCode).Must(FiscalRules.IsValidProductCode)
             .WithMessage("La clave de producto o servicio del SAT tiene 8 dígitos (ej. 53131600).");
@@ -39,36 +44,53 @@ public class InvoicingAccountService(
 {
     private IRepository<InvoicingAccount> Repo => uow.Repository<InvoicingAccount>();
 
-    public async Task<InvoicingAccountDto> GetAsync(CancellationToken ct = default) => ToDto(await Repo.FirstOrDefaultAsync(_ => true, ct));
+    /// <summary>The account of the given provider, or of the active one when none is given.</summary>
+    public async Task<InvoicingAccountDto> GetAsync(string? provider = null, CancellationToken ct = default)
+    {
+        var all = await Repo.ListAsync(null, ct);
+        var name = provider != null ? Provider(provider).Name : all.FirstOrDefault(a => a.IsActive)?.Provider ?? providers.First().Name;
+        return ToDto(all.FirstOrDefault(a => a.Provider == name), name, all);
+    }
 
+    /// <summary>Saves the provider's account and makes it the one used for new invoices; other providers keep theirs.</summary>
     public async Task<InvoicingAccountDto> SaveAsync(InvoicingAccountSaveDto dto, CancellationToken ct = default)
     {
         var provider = Provider(dto.Provider);
-        var account = await Repo.FirstOrDefaultAsync(_ => true, ct);
-        if (account == null) Repo.Add(account = new InvoicingAccount());
+        var info = provider.Info;
+        var all = await Repo.ListAsync(null, ct);
+        var account = all.FirstOrDefault(a => a.Provider == provider.Name);
+        if (account == null) { Repo.Add(account = new InvoicingAccount { Provider = provider.Name }); all = [.. all, account]; }
         else account.UpdatedAt = DateTime.UtcNow;
 
-        // Another provider or environment has its own CSD registry.
-        if (account.Provider != provider.Name || account.Sandbox != dto.Sandbox || account.UserName != dto.UserName.Trim())
+        var userName = info.UserNameLabel == null ? "" : dto.UserName.Trim();
+        if (info.UserNameLabel != null && userName.Length == 0)
+            throw new DomainException($"Captura el {info.UserNameLabel.ToLowerInvariant()}.");
+        if (account.ProtectedPassword == null && string.IsNullOrEmpty(dto.Password))
+            throw new DomainException($"Captura la {info.PasswordLabel.ToLowerInvariant()}.");
+        var sandbox = info.TestKeyPrefix == null ? dto.Sandbox
+            : !string.IsNullOrEmpty(dto.Password) ? dto.Password.StartsWith(info.TestKeyPrefix, StringComparison.Ordinal)
+            : account.Sandbox;
+
+        // Another environment or user has its own CSD registry at the provider.
+        if (account.Sandbox != sandbox || account.UserName != userName)
             account.CsdRfc = account.CsdCertificateNumber = null;
         if (account.CsdRfc == null) { account.CsdValidUntil = null; account.CsdUploadedAt = null; }
 
-        account.Provider = provider.Name;
-        account.Sandbox = dto.Sandbox;
-        account.UserName = dto.UserName.Trim();
+        account.Sandbox = sandbox;
+        account.UserName = userName;
         if (!string.IsNullOrEmpty(dto.Password)) account.ProtectedPassword = secrets.Protect(dto.Password);
         account.DefaultProductCode = dto.DefaultProductCode.Trim();
         account.Serie = string.IsNullOrWhiteSpace(dto.Serie) ? null : dto.Serie.Trim().ToUpperInvariant();
+        foreach (var a in all) a.IsActive = a == account;
         await uow.SaveChangesAsync(ct);
-        return ToDto(account);
+        return ToDto(account, account.Provider, all);
     }
 
     /// <summary>Calls the provider with the saved credentials.</summary>
-    public async Task VerifyAsync(CancellationToken ct = default)
+    public async Task VerifyAsync(string? provider = null, CancellationToken ct = default)
     {
-        var (account, provider, credentials) = await RequireCredentialsAsync(ct);
-        _ = account;
-        await provider.VerifyAsync(credentials, ct);
+        var (_, p, credentials) = await RequireCredentialsAsync(provider, ct);
+        await p.VerifyAsync(credentials, ct);
     }
 
     /// <summary>
@@ -77,7 +99,8 @@ public class InvoicingAccountService(
     /// </summary>
     public async Task<InvoicingAccountDto> UploadCsdAsync(byte[] certificate, byte[] privateKey, string password, CancellationToken ct = default)
     {
-        var (account, provider, credentials) = await RequireCredentialsAsync(ct);
+        var (account, provider, credentials) = await RequireCredentialsAsync(null, ct);
+        if (!provider.Info.UploadsCsd) throw new DomainException(provider.Info.CsdPortalHint ?? "Este proveedor recibe el CSD en su propio portal.");
         var info = ReadCsd(certificate, privateKey, password, DateTime.UtcNow);
 
         var businessRfc = FiscalRules.Normalize(await settings.GetAsync(SettingKeys.BusinessRfc, ct));
@@ -93,15 +116,23 @@ public class InvoicingAccountService(
         account.CsdUploadedAt = DateTime.UtcNow;
         account.UpdatedAt = DateTime.UtcNow;
         await uow.SaveChangesAsync(ct);
-        return ToDto(account);
+        return ToDto(account, account.Provider, await Repo.ListAsync(null, ct));
     }
 
-    /// <summary>The account, its provider and the decrypted credentials; explains what is missing otherwise.</summary>
-    internal async Task<(InvoicingAccount Account, IInvoiceProvider Provider, ProviderAccount Credentials)> RequireCredentialsAsync(CancellationToken ct)
+    /// <summary>
+    /// An account, its provider and the decrypted credentials: the active one for new invoices, or the one an existing
+    /// invoice was stamped with. Explains what is missing otherwise.
+    /// </summary>
+    internal async Task<(InvoicingAccount Account, IInvoiceProvider Provider, ProviderAccount Credentials)> RequireCredentialsAsync(
+        string? providerName, CancellationToken ct)
     {
-        var account = await Repo.FirstOrDefaultAsync(_ => true, ct);
-        if (account == null || string.IsNullOrEmpty(account.UserName) || account.ProtectedPassword == null)
-            throw new DomainException("Configura la cuenta de facturación en Configuración → Facturación.");
+        var account = providerName == null
+            ? await Repo.FirstOrDefaultAsync(a => a.IsActive, ct)
+            : await Repo.FirstOrDefaultAsync(a => a.Provider == providerName, ct);
+        if (account == null || account.ProtectedPassword == null)
+            throw new DomainException(providerName == null
+                ? "Configura la cuenta de facturación en Configuración → Facturación."
+                : $"Esta factura se emitió con {providerName}; vuelve a capturar esa cuenta en Configuración → Facturación para descargarla o cancelarla.");
         var password = secrets.Unprotect(account.ProtectedPassword)
             ?? throw new DomainException("La contraseña de facturación guardada ya no se puede leer en esta computadora; vuelve a capturarla en Configuración → Facturación.");
         return (account, Provider(account.Provider), new ProviderAccount(account.Sandbox, account.UserName, password));
@@ -111,14 +142,23 @@ public class InvoicingAccountService(
         providers.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase))
         ?? throw new DomainException($"El proveedor de facturación '{name}' no está disponible.");
 
-    private InvoicingAccountDto ToDto(InvoicingAccount? a)
+    private bool IsReady(InvoicingAccount a) =>
+        a.ProtectedPassword != null && secrets.Unprotect(a.ProtectedPassword) != null && (a.CsdRfc != null || !Provider(a.Provider).Info.UploadsCsd);
+
+    private InvoicingAccountDto ToDto(InvoicingAccount? a, string providerName, IReadOnlyList<InvoicingAccount> all)
     {
-        var names = providers.Select(p => p.Name).ToList();
-        if (a == null) return new("", names, true, null, false, false, "01010101", null, null, null, null, null, false);
+        var infos = providers.Select(p => p.Info).ToList();
+        var summaries = all.Where(x => providers.Any(p => p.Name == x.Provider))
+            .Select(x => new ProviderAccountSummary(x.Provider, x.IsActive, x.Sandbox, IsReady(x))).ToList();
+        var activeProvider = all.FirstOrDefault(x => x.IsActive)?.Provider;
+        var uploadsCsd = Provider(providerName).Info.UploadsCsd;
+        if (a == null)
+            return new(providerName, false, activeProvider, infos, summaries, true, null, false, false, "01010101", null,
+                null, null, null, null, !uploadsCsd, false);
         var unreadable = a.ProtectedPassword != null && secrets.Unprotect(a.ProtectedPassword) == null;
-        var ready = !string.IsNullOrEmpty(a.UserName) && a.ProtectedPassword != null && !unreadable && a.CsdRfc != null;
-        return new(a.Provider, names, a.Sandbox, a.UserName, a.ProtectedPassword != null, unreadable, a.DefaultProductCode, a.Serie,
-            a.CsdRfc, a.CsdCertificateNumber, a.CsdValidUntil, a.CsdUploadedAt, ready);
+        return new(a.Provider, a.IsActive, activeProvider, infos, summaries, a.Sandbox, a.UserName, a.ProtectedPassword != null, unreadable,
+            a.DefaultProductCode, a.Serie, a.CsdRfc, a.CsdCertificateNumber, a.CsdValidUntil, a.CsdUploadedAt,
+            a.CsdRfc != null || !uploadsCsd, IsReady(a));
     }
 
     /// <summary>Reads a SAT CSD: the .cer (DER) and the .key (encrypted PKCS#8 DER) that must open with the password and match it.</summary>

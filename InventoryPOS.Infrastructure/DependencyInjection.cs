@@ -73,7 +73,9 @@ public static class DependencyInjection
         // ── Invoicing (CFDI): one implementation per provider; the account picks which one is used ──
         services.AddSingleton<ISecretProtector, AesSecretProtector>();
         services.AddScoped<IInvoiceProvider, FacturamaProvider>();
+        services.AddScoped<IInvoiceProvider, FacturapiProvider>();
         services.AddHttpClient(FacturamaProvider.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(60));
+        services.AddHttpClient(FacturapiProvider.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(60));
 
         services.AddScoped<DatabaseInitializer>();
         if (database.IsSqlite)

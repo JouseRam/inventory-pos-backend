@@ -504,6 +504,9 @@ namespace InventoryPOS.Infrastructure.Sqlite.Migrations
                         .HasMaxLength(8)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("ProtectedPassword")
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");

@@ -43,10 +43,25 @@ public record CancelOutcome(bool Cancelled, string Status, string? Message);
 /// A PAC that stamps CFDI. Adding another provider means implementing this interface and registering it;
 /// the rest of the module only speaks these types.
 /// </summary>
+/// <summary>
+/// What the settings screen needs to know about a provider: which credentials it asks for, whether the CSD is uploaded
+/// from here or in the provider's portal, and how it is paid (plans are paid on the provider's site, never here).
+/// </summary>
+/// <param name="UserNameLabel">Null when the provider authenticates with a single API key.</param>
+/// <param name="TestKeyPrefix">When set, the key itself says whether it is a test key (and the environment selector is hidden).</param>
+public record ProviderInfo(
+    string Name, string DisplayName, string? UserNameLabel, string PasswordLabel, string? PasswordHint,
+    bool UploadsCsd, string? CsdPortalHint, string? TestKeyPrefix,
+    string Billing, IReadOnlyList<ProviderPlan> Plans, string BillingUrl, string SignupUrl, string PricingUrl);
+
+public record ProviderPlan(string Name, string Price, string Detail);
+
 public interface IInvoiceProvider
 {
     /// <summary>Name stored on the account and on each invoice, e.g. "Facturama".</summary>
     string Name { get; }
+
+    ProviderInfo Info { get; }
 
     /// <summary>Checks the credentials; throws <see cref="InvoicingException"/> when they are rejected.</summary>
     Task VerifyAsync(ProviderAccount account, CancellationToken ct);

@@ -28,6 +28,20 @@ public class FacturamaProvider(IHttpClientFactory httpFactory) : IInvoiceProvide
 
     public string Name => ProviderName;
 
+    public ProviderInfo Info { get; } = new(
+        ProviderName, "Facturama (API Multiemisor)", "Usuario de Facturama", "Contraseña de Facturama", null,
+        UploadsCsd: true, CsdPortalHint: null, TestKeyPrefix: null,
+        Billing: "Pago anual del módulo API más folios en prepago, que compras en tu cuenta de Facturama cuando se acaban.",
+        Plans:
+        [
+            new("Módulo API", "$1,650 MXN al año", "Incluye API Web y Multiemisor y 100 folios."),
+            new("Folios", "$0.50 MXN c/u", "De 1 a 10,000; baja a $0.45 y $0.40 con más volumen. Vigencia anual."),
+            new("Pruebas", "Gratis", "Ambiente de pruebas sin costo; las facturas no tienen validez."),
+        ],
+        BillingUrl: "https://facturama.mx/planes-facturacion",
+        SignupUrl: "https://facturama.mx/api-facturacion-electronica",
+        PricingUrl: "https://api.facturama.mx/costos");
+
     public async Task VerifyAsync(ProviderAccount account, CancellationToken ct)
     {
         using var response = await SendAsync(account, HttpMethod.Get, "api-lite/csds/", null, ct);

@@ -52,7 +52,9 @@ public sealed class MainForm : Form
         // Keep the register on the local app; external links open in the default browser.
         core.NavigationStarting += (_, e) =>
         {
-            if (!e.Uri.StartsWith(_home.GetLeftPart(UriPartial.Authority), StringComparison.OrdinalIgnoreCase))
+            // blob: carries files the page builds itself (invoice PDF/XML downloads); it never leaves this machine.
+            if (!e.Uri.StartsWith(_home.GetLeftPart(UriPartial.Authority), StringComparison.OrdinalIgnoreCase) &&
+                !e.Uri.StartsWith("blob:", StringComparison.OrdinalIgnoreCase))
             {
                 e.Cancel = true;
                 OpenExternal(e.Uri);

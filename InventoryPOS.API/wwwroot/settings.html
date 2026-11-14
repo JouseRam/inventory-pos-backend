@@ -25,21 +25,33 @@
     <form data-panel="business" id="settings-form" style="display:grid;gap:20px"></form>
 
     <section data-panel="invoicing" hidden style="display:grid;gap:20px">
+      <section class="panel">
+        <header><h2>Proveedor de facturación (PAC)</h2><span id="inv-active"></span></header>
+        <div class="body">
+          <p class="muted" style="margin:0 0 12px">Elige con quién timbras. Puedes cambiar cuando quieras: cada proveedor guarda su propia cuenta,
+            y las facturas emitidas con uno se siguen descargando y cancelando con él.</p>
+          <div class="provider-grid" id="inv-providers"></div>
+          <p class="muted" style="margin:12px 0 0;font-size:.85rem"><i class="bi bi-shield-lock"></i> El pago se hace en el sitio seguro del proveedor;
+            este sistema no recibe ni guarda datos de tarjeta. Los precios son de referencia: confírmalos en su página.</p>
+        </div>
+      </section>
+
       <form class="panel" id="inv-account-form">
-        <header><h2>Cuenta del proveedor de facturación</h2><span id="inv-status"></span></header>
+        <header><h2 id="inv-account-title">Cuenta</h2><span id="inv-status"></span></header>
         <div class="body form-grid">
-          <p class="muted span-all" style="margin:0">Cada computadora que factura se configura aquí. La contraseña se guarda cifrada y nunca se muestra.</p>
-          <label class="field"><span>Proveedor (PAC)</span><select name="provider" id="inv-provider"></select></label>
-          <label class="field"><span>Ambiente</span><select name="sandbox" id="inv-sandbox">
+          <p class="muted span-all" style="margin:0">Cada computadora que factura se configura aquí. La contraseña o llave se guarda cifrada y nunca se muestra.</p>
+          <input type="hidden" name="provider">
+          <label class="field" data-env><span>Ambiente</span><select name="sandbox">
             <option value="true">Pruebas (gratis, sin validez ante el SAT)</option><option value="false">Producción (facturas reales)</option></select></label>
-          <label class="field"><span>Usuario de la cuenta</span><input name="userName" maxlength="150" autocomplete="off" required></label>
-          <label class="field"><span>Contraseña de la cuenta</span><input name="password" type="password" maxlength="200" autocomplete="new-password" id="inv-password"></label>
+          <label class="field" data-user><span data-user-label>Usuario</span><input name="userName" maxlength="150" autocomplete="off"></label>
+          <label class="field" data-password><span data-password-label>Contraseña</span><input name="password" type="password" maxlength="200" autocomplete="new-password"></label>
+          <p class="muted span-all" data-password-hint hidden style="margin:0;font-size:.85rem"></p>
           <label class="field"><span>Clave SAT de producto por defecto</span><input name="defaultProductCode" maxlength="8" inputmode="numeric" class="mono" required
             title="c_ClaveProdServ de 8 dígitos para los productos; 01010101 si no aplica una específica"></label>
           <label class="field"><span>Serie de las facturas (opcional)</span><input name="serie" maxlength="25" class="mono" placeholder="Ej. F"></label>
         </div>
-        <footer style="display:flex;gap:10px;padding:0 16px 16px">
-          <button class="btn primary" type="submit">Guardar cuenta</button>
+        <footer style="display:flex;gap:10px;flex-wrap:wrap;padding:0 16px 16px">
+          <button class="btn primary" type="submit" data-save>Guardar y usar este proveedor</button>
           <button class="btn" type="button" id="inv-verify"><i class="bi bi-plug"></i>Probar conexión</button>
         </footer>
       </form>
@@ -48,12 +60,16 @@
         <header><h2>Certificado de sello digital (CSD)</h2></header>
         <div class="body form-grid">
           <div class="span-all" id="inv-csd-current"></div>
-          <p class="muted span-all" style="margin:0">Es el CSD que tramitas en el SAT (no la e.firma). Los archivos se envían al proveedor, que los guarda para sellar tus facturas; esta computadora no los conserva.</p>
-          <label class="field"><span>Certificado (.cer)</span><input type="file" name="certificate" accept=".cer" required></label>
-          <label class="field"><span>Llave privada (.key)</span><input type="file" name="privateKey" accept=".key" required></label>
-          <label class="field"><span>Contraseña de la llave privada</span><input type="password" name="password" autocomplete="off" required></label>
+          <div class="span-all" data-csd-upload>
+            <p class="muted" style="margin:0 0 12px">Es el CSD que tramitas en el SAT (no la e.firma). Los archivos se envían al proveedor, que los guarda para sellar tus facturas; esta computadora no los conserva.</p>
+            <div class="form-grid">
+              <label class="field"><span>Certificado (.cer)</span><input type="file" name="certificate" accept=".cer" required></label>
+              <label class="field"><span>Llave privada (.key)</span><input type="file" name="privateKey" accept=".key" required></label>
+              <label class="field"><span>Contraseña de la llave privada</span><input type="password" name="password" autocomplete="off" required></label>
+            </div>
+          </div>
         </div>
-        <footer style="padding:0 16px 16px"><button class="btn primary" type="submit"><i class="bi bi-upload"></i>Subir CSD al proveedor</button></footer>
+        <footer style="padding:0 16px 16px" data-csd-upload><button class="btn primary" type="submit"><i class="bi bi-upload"></i>Subir CSD al proveedor</button></footer>
       </form>
       <p class="muted" style="margin:0">El RFC, la razón social, el régimen fiscal y el código postal de expedición se capturan en la pestaña <a href="#business" data-goto="business">Negocio</a>.</p>
     </section>
@@ -379,47 +395,99 @@
         try { await api.del('/sync/devices/' + b.dataset.revoke); toast('Caja revocada.'); await loadDevices(); } catch (err) { POS.fail(err); }
       });
 
-      // ── Invoicing: this computer's provider account and the CSD ──
-      async function loadInvoicing() {
-        const a = await api.get('/invoicing/account');
+      // ── Invoicing: providers (with their plans and payment pages), this computer's account for each, and the CSD ──
+      let invoicing = null;
+      const external = (url, label, icon, primary = false) =>
+        `<a class="btn ${primary ? 'primary' : ''} sm" href="${esc(url)}" target="_blank" rel="noopener"><i class="bi ${icon}"></i>${esc(label)}</a>`;
+
+      function renderProviders(a) {
+        const summary = name => a.accounts.find(x => x.provider === name);
+        $('#inv-active').innerHTML = a.activeProvider ? `<span class="pill accent">En uso: ${esc(a.activeProvider)}</span>` : '<span class="pill">Sin proveedor</span>';
+        $('#inv-providers').innerHTML = a.providers.map(p => {
+          const acc = summary(p.name);
+          const state = acc?.active ? '<span class="pill good">En uso</span>' : acc ? '<span class="pill">Configurado</span>' : '';
+          return `<article class="provider-card ${p.name === a.provider ? 'selected' : ''}">
+            <header><h3>${esc(p.displayName)}</h3>${state}</header>
+            <p class="muted">${esc(p.billing)}</p>
+            <ul class="plans">${p.plans.map(pl => `<li><span>${esc(pl.name)}</span><b class="mono">${esc(pl.price)}</b><small class="muted">${esc(pl.detail)}</small></li>`).join('')}</ul>
+            <div class="actions">
+              <button class="btn sm ${p.name === a.provider ? '' : 'primary'}" type="button" data-pick="${esc(p.name)}">${p.name === a.provider ? 'Configurando' : acc ? 'Ver cuenta' : 'Configurar'}</button>
+              ${external(p.billingUrl, acc ? 'Pagar o comprar folios' : 'Contratar', 'bi-credit-card')}
+              ${acc ? '' : external(p.signupUrl, 'Crear cuenta', 'bi-person-plus')}
+              ${external(p.pricingUrl, 'Precios', 'bi-tag')}
+            </div>
+          </article>`;
+        }).join('');
+      }
+
+      async function loadInvoicing(provider) {
+        const a = invoicing = await api.get('/invoicing/account' + (provider ? '?provider=' + encodeURIComponent(provider) : ''));
+        const info = a.providers.find(p => p.name === a.provider);
         const f = $('#inv-account-form');
-        $('#inv-provider').innerHTML = a.providers.map(p => `<option ${p === a.provider ? 'selected' : ''}>${esc(p)}</option>`).join('');
+        renderProviders(a);
+        $('#inv-account-title').textContent = `Cuenta de ${info.displayName}`;
+        f.elements.provider.value = a.provider;
+        // Providers whose key tells test from live hide the environment selector.
+        f.querySelector('[data-env]').hidden = !!info.testKeyPrefix;
         f.elements.sandbox.value = String(a.sandbox);
+        f.querySelector('[data-user]').hidden = !info.userNameLabel;
+        f.querySelector('[data-user-label]').textContent = info.userNameLabel || '';
         f.elements.userName.value = a.userName || '';
+        f.elements.userName.required = !!info.userNameLabel;
+        f.querySelector('[data-password-label]').textContent = info.passwordLabel;
+        f.querySelector('[data-password-hint]').hidden = !info.passwordHint;
+        f.querySelector('[data-password-hint]').textContent = info.passwordHint || '';
         f.elements.password.value = '';
         f.elements.password.placeholder = a.passwordUnreadable ? 'Vuelve a capturarla' : a.hasPassword ? 'Guardada · escribe para cambiarla' : '';
         f.elements.password.required = !a.hasPassword || a.passwordUnreadable;
         f.elements.defaultProductCode.value = a.defaultProductCode || '01010101';
         f.elements.serie.value = a.serie || '';
-        $('#inv-status').innerHTML = a.ready
-          ? `<span class="pill good">Lista para facturar${a.sandbox ? ' · pruebas' : ''}</span>`
-          : a.passwordUnreadable ? '<span class="pill crit">Contraseña ilegible</span>'
+        f.querySelector('[data-save]').textContent = a.active ? 'Guardar cambios' : 'Guardar y usar este proveedor';
+        const env = a.hasPassword ? (a.sandbox ? ' · pruebas' : ' · producción') : '';
+        $('#inv-status').innerHTML = a.ready && a.active ? `<span class="pill good">Lista para facturar${env}</span>`
+          : a.ready ? `<span class="pill">Lista, no está en uso${env}</span>`
+          : a.passwordUnreadable ? '<span class="pill crit">Credencial ilegible</span>'
           : !a.hasPassword ? '<span class="pill">Sin configurar</span>' : '<span class="pill warn">Falta el CSD</span>';
+
+        $$('#inv-csd-form [data-csd-upload]').forEach(el => { el.hidden = !info.uploadsCsd; });
         const soon = a.csdValidUntil && (new Date(a.csdValidUntil) - Date.now()) < 30 * 864e5;
-        $('#inv-csd-current').innerHTML = a.csdRfc
+        $('#inv-csd-current').innerHTML = !info.uploadsCsd
+          ? `<div class="notice"><i class="bi bi-info-circle"></i><div>${esc(info.csdPortalHint || '')} ${external(info.billingUrl, 'Abrir el panel', 'bi-box-arrow-up-right')}</div></div>`
+          : a.csdRfc
           ? `<dl class="facts" style="margin:0"><dt>RFC</dt><dd class="mono">${esc(a.csdRfc)}</dd><dt>Número de certificado</dt><dd class="mono">${esc(a.csdCertificateNumber || '')}</dd>
               <dt>Vigente hasta</dt><dd>${POS.fmt.date(a.csdValidUntil)} ${soon ? '<span class="pill warn">Vence pronto</span>' : ''}</dd><dt>Subido</dt><dd>${POS.fmt.dateTime(a.csdUploadedAt)}</dd></dl>`
           : '<p style="margin:0">Aún no has subido el CSD.</p>';
+
         const canEditInvoicing = session.can('Settings', true);
         document.querySelectorAll('#inv-account-form input, #inv-account-form select, #inv-account-form button, #inv-csd-form input, #inv-csd-form button')
           .forEach(el => { el.disabled = !canEditInvoicing; });
-        $('#inv-csd-form button[type=submit]').disabled = !canEditInvoicing || !a.hasPassword || a.passwordUnreadable;
+        // The CSD goes to the provider in use, once its account is saved.
+        $('#inv-csd-form button[type=submit]').disabled = !canEditInvoicing || !a.active || !a.hasPassword || a.passwordUnreadable;
+        $('#inv-verify').disabled = !canEditInvoicing || !a.hasPassword;
       }
+      $('#inv-providers').addEventListener('click', e => {
+        const pick = e.target.closest('[data-pick]');
+        if (pick) loadInvoicing(pick.dataset.pick).catch(POS.fail);
+      });
       $('#inv-account-form').addEventListener('submit', async e => {
         e.preventDefault();
         const f = e.target.elements;
+        const switching = invoicing.activeProvider && invoicing.activeProvider !== f.provider.value;
+        if (switching && !await POS.confirmBox(`Las nuevas facturas se timbrarán con ${f.provider.value} en lugar de ${invoicing.activeProvider}. `
+          + `Las facturas ya emitidas se siguen descargando y cancelando con ${invoicing.activeProvider}.`, { okText: `Usar ${f.provider.value}` })) return;
         try {
           await api.put('/invoicing/account', {
             provider: f.provider.value, sandbox: f.sandbox.value === 'true', userName: f.userName.value.trim(),
             password: f.password.value || null, defaultProductCode: f.defaultProductCode.value.trim(), serie: f.serie.value.trim() || null,
           });
-          toast('Cuenta de facturación guardada.');
-          await loadInvoicing();
+          toast(switching ? `Ahora facturas con ${f.provider.value}.` : 'Cuenta de facturación guardada.');
+          await loadInvoicing(f.provider.value);
         } catch (err) { POS.fail(err); }
       });
       $('#inv-verify').addEventListener('click', async () => {
         if (!navigator.onLine) { POS.fail(new Error('Sin conexión a internet: no se puede probar la cuenta.')); return; }
-        try { await api.post('/invoicing/account/verify'); toast('Conexión correcta con el proveedor.'); } catch (err) { POS.fail(err); }
+        try { await api.post('/invoicing/account/verify?provider=' + encodeURIComponent(invoicing.provider)); toast('Conexión correcta con el proveedor.'); }
+        catch (err) { POS.fail(err); }
       });
       $('#inv-csd-form').addEventListener('submit', async e => {
         e.preventDefault();
@@ -429,7 +497,7 @@
           await api.upload('/invoicing/account/csd', new FormData(e.target));
           e.target.reset();
           toast('CSD subido al proveedor.');
-          await loadInvoicing();
+          await loadInvoicing(invoicing.provider);
         } catch (err) { POS.fail(err); } finally { btn.disabled = false; }
       });
       document.querySelector('[data-goto="business"]').addEventListener('click', e => { e.preventDefault(); show('business'); });
@@ -438,7 +506,7 @@
         $$('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
         $$('[data-panel]').forEach(p => { p.hidden = p.dataset.panel !== tab; });
         history.replaceState(null, '', '#' + tab);
-        ({ users: loadUsers, printer: loadPrinter, business: loadSettings, sync: loadSync, invoicing: loadInvoicing })[tab]().catch(POS.fail);
+        ({ users: loadUsers, printer: loadPrinter, business: loadSettings, sync: loadSync, invoicing: () => loadInvoicing() })[tab]().catch(POS.fail);
       }
       $('#users-tab').hidden = !isAdmin || POS.env.catalogLocked;
       // The web has no receipt printer and backs up through its database server.

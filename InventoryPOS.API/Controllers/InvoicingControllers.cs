@@ -14,17 +14,18 @@ public class InvoicingAccountController(InvoicingAccountService service) : Contr
 {
     private const long MaxCsdFileBytes = 64 * 1024;
 
+    /// <summary>The active account, or the saved one of the provider asked for.</summary>
     [HttpGet]
-    public Task<InvoicingAccountDto> Get(CancellationToken ct) => service.GetAsync(ct);
+    public Task<InvoicingAccountDto> Get([FromQuery] string? provider, CancellationToken ct) => service.GetAsync(provider, ct);
 
     [HttpPut]
     public Task<InvoicingAccountDto> Save(InvoicingAccountSaveDto dto, CancellationToken ct) => service.SaveAsync(dto, ct);
 
     /// <summary>Tries the saved credentials against the provider.</summary>
     [HttpPost("verify")]
-    public async Task<IActionResult> Verify(CancellationToken ct)
+    public async Task<IActionResult> Verify([FromQuery] string? provider, CancellationToken ct)
     {
-        await service.VerifyAsync(ct);
+        await service.VerifyAsync(provider, ct);
         return Ok(new { ok = true });
     }
 

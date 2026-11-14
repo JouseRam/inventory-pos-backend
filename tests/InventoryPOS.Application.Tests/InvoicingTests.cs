@@ -20,9 +20,13 @@ namespace InventoryPOS.Application.Tests;
 /// <summary>Records what the module asks of the provider, without calling any PAC.</summary>
 public class FakeInvoiceProvider : IInvoiceProvider
 {
-    public string Name => "Fake";
+    public string Name { get; init; } = "Fake";
+    public bool UploadsCsd { get; init; } = true;
+    public ProviderInfo Info => new(Name, "Proveedor de prueba", UploadsCsd ? "Usuario" : null, "Contraseña", null, UploadsCsd, null, null,
+        "Sin costo", [], "https://example.com/pay", "https://example.com", "https://example.com/pricing");
     public List<CfdiRequest> Stamped { get; } = [];
     public List<CsdFiles> Uploaded { get; } = [];
+    public List<string> Cancelled { get; } = [];
     public bool Offline { get; set; }
 
     public Task VerifyAsync(ProviderAccount account, CancellationToken ct) => Task.CompletedTask;
@@ -37,7 +41,7 @@ public class FakeInvoiceProvider : IInvoiceProvider
     {
         if (Offline) throw new InvoicingOfflineException();
         Stamped.Add(request);
-        return Task.FromResult(new StampedCfdi($"fake-{Stamped.Count}", Guid.NewGuid().ToString().ToUpperInvariant(),
+        return Task.FromResult(new StampedCfdi($"{Name}-{Stamped.Count}", Guid.NewGuid().ToString().ToUpperInvariant(),
             request.Concepts.Sum(c => c.Total)));
     }
 
@@ -45,7 +49,13 @@ public class FakeInvoiceProvider : IInvoiceProvider
         Task.FromResult(Encoding.UTF8.GetBytes(format == CfdiFileFormat.Xml ? "<cfdi:Comprobante/>" : "%PDF-1.4"));
 
     public Task<CancelOutcome> CancelAsync(ProviderAccount account, string providerId, string motive, string? replacementUuid, CancellationToken ct) =>
-        Task.FromResult(new CancelOutcome(true, "canceled", null));
+        Task.FromResult(Cancel(providerId));
+
+    private CancelOutcome Cancel(string providerId)
+    {
+        Cancelled.Add(providerId);
+        return new CancelOutcome(true, "canceled", null);
+    }
 }
 
 public class InvoicingTests
@@ -56,6 +66,8 @@ public class InvoicingTests
     {
         public PosTestContext Pos { get; } = new();
         public FakeInvoiceProvider Provider { get; } = new();
+        /// <summary>A second provider that, like Facturapi, receives the CSD in its own portal.</summary>
+        public FakeInvoiceProvider Other { get; } = new() { Name = "Otro", UploadsCsd = false };
         public InvoicingAccountService Accounts { get; }
         public InvoiceService Invoices { get; }
         public SettingService Settings { get; }
@@ -64,7 +76,7 @@ public class InvoicingTests
         {
             var protector = new AesSecretProtector(Options.Create(new JwtOptions { Key = new string('k', 48) }));
             Settings = new SettingService(Pos.Uow, new PosGuard(Pos.Env));
-            Accounts = new InvoicingAccountService(Pos.Uow, [Provider], protector, Settings);
+            Accounts = new InvoicingAccountService(Pos.Uow, [Provider, Other], protector, Settings);
             Invoices = new InvoiceService(Pos.Uow, Accounts, Settings, Pos.User, Pos.Env);
         }
 
@@ -268,6 +280,62 @@ public class InvoicingTests
     public void Invalid_receivers_are_rejected(string rfc, string regime, string use)
     {
         Assert.False(new InvoiceCreateValidator().Validate(Receiver(rfc, regime, use)).IsValid);
+    }
+
+    [Fact]
+    public async Task Switching_provider_keeps_the_previous_invoices_working()
+    {
+        using var s = new Setup();
+        await s.ConfigureAsync();
+        var first = await s.SellAsync();
+        var old = await s.Invoices.CreateAsync(first.Id, Receiver());
+
+        // The second provider keeps the CSD in its portal: saving its key is enough to invoice.
+        var other = await s.Accounts.SaveAsync(new InvoicingAccountSaveDto("Otro", false, "", "llave-otro", "53131600", null));
+        Assert.True(other.Ready);
+        Assert.Equal("Otro", other.ActiveProvider);
+        var second = await s.Pos.Sales.CreateAsync(new SaleCreateDto(null, 0, null,
+            [new SaleItemSaveDto(first.Items![0].VariantId, 1, null)], [new SalePaymentSaveDto(PaymentMethods.Cash, 500, null)]));
+        await s.Invoices.CreateAsync(second.Id, Receiver());
+        Assert.Single(s.Other.Stamped);
+
+        // The first invoice is still served and cancelled by the provider that stamped it.
+        await s.Invoices.FileAsync(old.Id, CfdiFileFormat.Xml);
+        await s.Invoices.CancelAsync(old.Id, new InvoiceCancelDto(CancelMotives.WithErrorsNoReplacement, null));
+        Assert.Equal(["Fake-1"], s.Provider.Cancelled);
+        Assert.Empty(s.Other.Cancelled);
+
+        // Both accounts stay saved; only one is active.
+        var accounts = (await s.Accounts.GetAsync()).Accounts;
+        Assert.Equal(2, accounts.Count);
+        Assert.Single(accounts, a => a.Active);
+        Assert.Equal("usuario", (await s.Accounts.GetAsync("Fake")).UserName);
+    }
+
+    [Fact]
+    public async Task A_provider_that_keeps_the_csd_in_its_portal_does_not_take_it_here()
+    {
+        using var s = new Setup();
+        await s.ConfigureAsync(withCsd: false);
+        await s.Accounts.SaveAsync(new InvoicingAccountSaveDto("Otro", false, "", "llave-otro", "53131600", null));
+        var (cer, key) = Csd(BusinessRfc, "12345678a");
+
+        await Assert.ThrowsAsync<DomainException>(() => s.Accounts.UploadCsdAsync(cer, key, "12345678a"));
+        Assert.Empty(s.Other.Uploaded);
+    }
+
+    [Theory]
+    [InlineData("V-000123", 123L)]
+    [InlineData("SIN-NUMERO", null)]
+    public void Facturapi_folios_are_numbers(string folio, long? expected)
+    {
+        Assert.Equal(expected, FacturapiProvider.FolioNumber(folio));
+    }
+
+    [Fact]
+    public void Facturapi_errors_are_turned_into_readable_messages()
+    {
+        Assert.Equal("El RFC no es válido.", FacturapiProvider.ErrorMessage("""{"message":"El RFC no es válido.","path":"customer.tax_id"}"""));
     }
 
     [Fact]

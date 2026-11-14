@@ -37,6 +37,8 @@ public class Invoice : BaseEntity
 public class InvoicingAccount : BaseEntity
 {
     public string Provider { get; set; } = string.Empty;
+    /// <summary>The account new invoices use. Accounts of other providers stay so their invoices can be downloaded and cancelled.</summary>
+    public bool IsActive { get; set; }
     /// <summary>True for the provider's test environment, where stamps are free and not valid before the SAT.</summary>
     public bool Sandbox { get; set; } = true;
     public string UserName { get; set; } = string.Empty;
