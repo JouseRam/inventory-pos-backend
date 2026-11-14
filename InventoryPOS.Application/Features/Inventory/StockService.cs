@@ -45,8 +45,12 @@ public class StockService(IUnitOfWork uow, ICurrentUser currentUser)
     }
 
     /// <summary>Removes stock, consuming batches first-expired-first-out when the product tracks lots.</summary>
+    /// <summary>
+    /// Takes stock out first-expired-first-out. A preferred lot (the one whose label was scanned) goes first, so the
+    /// count per lot matches the shelf; whatever it cannot cover comes from the others as usual.
+    /// </summary>
     public async Task RemoveAsync(ProductVariant variant, decimal quantity, string type, string? reference,
-        string? notes = null, CancellationToken ct = default)
+        string? notes = null, CancellationToken ct = default, int? preferredBatchId = null)
     {
         if (quantity <= 0) throw new DomainException("La cantidad a retirar debe ser mayor a cero.");
         if (variant.Stock < quantity)
@@ -55,7 +59,8 @@ public class StockService(IUnitOfWork uow, ICurrentUser currentUser)
         if (variant.Product.TracksBatches)
         {
             var remaining = quantity;
-            foreach (var batch in await uow.Batches.GetAvailableFefoAsync(variant.Id, ct))
+            var batches = (await uow.Batches.GetAvailableFefoAsync(variant.Id, ct)).OrderBy(b => b.Id != preferredBatchId).ToList();
+            foreach (var batch in batches)
             {
                 if (remaining <= 0) break;
                 var take = Math.Min(batch.Quantity, remaining);

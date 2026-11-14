@@ -603,6 +603,10 @@ namespace InventoryPOS.Infrastructure.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Code")
+                        .HasMaxLength(12)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
@@ -629,6 +633,9 @@ namespace InventoryPOS.Infrastructure.Sqlite.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Code")
+                        .IsUnique();
+
                     b.HasIndex("ExpirationDate");
 
                     b.HasIndex("Uid")
@@ -648,6 +655,10 @@ namespace InventoryPOS.Infrastructure.Sqlite.Migrations
 
                     b.Property<string>("Barcode")
                         .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Code")
+                        .HasMaxLength(12)
                         .HasColumnType("TEXT");
 
                     b.Property<decimal>("Cost")
@@ -713,6 +724,9 @@ namespace InventoryPOS.Infrastructure.Sqlite.Migrations
                     b.HasIndex("Barcode")
                         .IsUnique()
                         .HasFilter("[Barcode] IS NOT NULL");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
 
                     b.HasIndex("ProductId");
 

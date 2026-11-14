@@ -53,20 +53,46 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
   }
 
   $('#search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(search, 220); });
-  // Enter: a barcode or SKU adds straight to the ticket; otherwise it just searches.
+  /**
+   * A label's ID (presentation or lot), a barcode or a SKU adds straight to the ticket. Returns false when nothing
+   * matches, so a typed search can carry on.
+   */
+  async function scan(code) {
+    try {
+      add(await api.get('/variants/code/' + encodeURIComponent(code)));
+      return true;
+    } catch (err) {
+      if (err.status !== 404) fail(err);
+      return false;
+    }
+  }
+
+  // Enter: a code adds straight to the ticket; otherwise it just searches.
   $('#search').addEventListener('keydown', async e => {
     if (e.key === 'Escape') { e.target.value = ''; renderResults([], ''); }
     if (e.key !== 'Enter') return;
     e.preventDefault();
     const q = e.target.value.trim();
     if (!q) return;
-    try {
-      const v = await api.get('/variants/code/' + encodeURIComponent(q));
-      add(v);
-      e.target.value = '';
-      renderResults([], '');
-    } catch (err) {
-      if (err.status === 404) search(); else fail(err);
+    if (await scan(q)) { e.target.value = ''; renderResults([], ''); }
+    else search();
+  });
+
+  // A Bluetooth or USB scanner types the code like a very fast keyboard and ends with Enter. When the cursor is not in
+  // a field (after clicking the ticket, the customer list…), those keystrokes are caught here so a scan never gets lost.
+  let burst = '', burstAt = 0;
+  document.addEventListener('keydown', e => {
+    const field = e.target.closest?.('input, textarea, select, [contenteditable]');
+    if (field || document.querySelector('dialog[open]') || e.ctrlKey || e.altKey || e.metaKey) { burst = ''; return; }
+    const now = performance.now();
+    if (now - burstAt > 60) burst = '';
+    burstAt = now;
+    if (e.key === 'Enter') {
+      const code = burst;
+      burst = '';
+      if (code.length >= 4) { e.preventDefault(); scan(code).then(ok => { if (!ok) toast(`No hay producto con el código ${code}.`, 'error'); }); }
+    } else if (e.key.length === 1) {
+      burst += e.key;
     }
   });
   $('#results').addEventListener('click', e => {
@@ -77,15 +103,19 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
   });
 
   // ── Ticket ──
+  // Pieces of one presentation across its lines (a lot scanned apart is its own line).
+  const qtyOf = variantId => cart.filter(l => l.variant.id === variantId).reduce((n, l) => n + l.qty, 0);
+
   function add(v) {
     if (v.stock <= 0) { toast(`${v.displayName} está agotado.`, 'error'); return; }
-    const line = cart.find(l => l.variant.id === v.id);
+    if (qtyOf(v.id) + 1 > v.stock) { toast(`Solo hay ${fmt.qty(v.stock)} de ${v.displayName}.`, 'error'); return; }
+    const batchId = v.scannedBatchId ?? null;
+    const line = cart.find(l => l.variant.id === v.id && (l.batchId ?? null) === batchId);
     if (line) {
-      if (line.qty + 1 > v.stock) { toast(`Solo hay ${fmt.qty(v.stock)} de ${v.displayName}.`, 'error'); return; }
       line.qty += 1;
       line.variant = v;
     } else {
-      cart.push({ variant: v, qty: 1 });
+      cart.push({ variant: v, qty: 1, batchId, lot: v.scannedLot ?? null });
     }
     renderTicket();
   }
@@ -100,7 +130,7 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
     saveCart();
     $('#lines').innerHTML = cart.length ? cart.map((l, i) => `
       <div class="line">
-        <div class="what">${shade.swatch(l.variant.shadeCode, 'sm')}<span>${esc(l.variant.displayName)}</span></div>
+        <div class="what">${shade.swatch(l.variant.shadeCode, 'sm')}<span>${esc(l.variant.displayName)}${l.lot ? ` <span class="pill">Lote ${esc(l.lot)}</span>` : ''}</span></div>
         <div class="amount">${fmt.money(l.qty * l.variant.price)}</div>
         <div class="controls">
           <span class="stepper">
@@ -128,7 +158,7 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
     const line = cart[idx];
     if (!line) return;
     if ('inc' in t.dataset) {
-      if (line.qty + 1 > line.variant.stock) { toast(`Solo hay ${fmt.qty(line.variant.stock)} disponibles.`, 'error'); return; }
+      if (qtyOf(line.variant.id) + 1 > line.variant.stock) { toast(`Solo hay ${fmt.qty(line.variant.stock)} disponibles.`, 'error'); return; }
       line.qty += 1;
     } else if ('dec' in t.dataset) {
       line.qty -= 1;
@@ -144,7 +174,7 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
     const line = cart[Number(idx)];
     const qty = Number(e.target.value);
     if (!(qty > 0)) cart.splice(Number(idx), 1);
-    else if (qty > line.variant.stock) toast(`Solo hay ${fmt.qty(line.variant.stock)} disponibles.`, 'error');
+    else if (qtyOf(line.variant.id) - line.qty + qty > line.variant.stock) toast(`Solo hay ${fmt.qty(line.variant.stock)} disponibles.`, 'error');
     else line.qty = qty;
     renderTicket();
   });
@@ -234,7 +264,7 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
       customerId: $('#customer').value ? Number($('#customer').value) : null,
       discount: totals().discount,
       notes: $('#pay-notes').value.trim() || null,
-      items: cart.map(l => ({ variantId: l.variant.id, quantity: l.qty, unitPrice: null, discount: 0 })),
+      items: cart.map(l => ({ variantId: l.variant.id, quantity: l.qty, unitPrice: null, discount: 0, batchId: l.batchId ?? null })),
       payments,
     };
     $('#pay-confirm').disabled = true;

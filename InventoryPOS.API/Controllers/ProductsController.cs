@@ -1,3 +1,4 @@
+using InventoryPOS.Application.Features.Labels;
 using InventoryPOS.API.Authorization;
 using InventoryPOS.Application.Features.Products;
 using InventoryPOS.Domain.Constants;
@@ -66,4 +67,23 @@ public class VariantsController(ProductService service) : ControllerBase
         await service.DeleteVariantAsync(id, ct);
         return NoContent();
     }
+}
+
+/// <summary>Label data for the label sheet: the page lays them out and prints them.</summary>
+[ApiController]
+[Route("api/labels")]
+[RequireModule(PosModules.Products)]
+public class LabelsController(LabelService service) : ControllerBase
+{
+    [HttpGet("product/{id:int}")]
+    public Task<IReadOnlyList<LabelDto>> ForProduct(int id, CancellationToken ct) => service.ForProductAsync(id, ct);
+
+    [HttpGet("purchase/{id:int}")]
+    [RequireModule(PosModules.Purchases)]
+    public Task<IReadOnlyList<LabelDto>> ForPurchase(int id, CancellationToken ct) => service.ForPurchaseAsync(id, ct);
+
+    /// <summary>A POST only because the list travels in the body; nothing is stored.</summary>
+    [HttpPost]
+    [AnyUser]
+    public Task<IReadOnlyList<LabelDto>> Build(List<LabelItemRequest> items, CancellationToken ct) => service.BuildAsync(items, ct);
 }

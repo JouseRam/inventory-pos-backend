@@ -15,7 +15,8 @@ public interface IProductVariantRepository : IRepository<ProductVariant>
     Task<IReadOnlyList<ProductVariant>> GetByIdsWithProductAsync(IEnumerable<int> ids, CancellationToken ct = default);
     /// <summary>Matches name, brand, shade, SKU or barcode among active variants.</summary>
     Task<IReadOnlyList<ProductVariant>> SearchAsync(string q, int take, CancellationToken ct = default);
-    Task<ProductVariant?> GetByCodeAsync(string code, CancellationToken ct = default);
+    /// <summary>Exact lookup by the system ID, a lot ID, the barcode or the SKU; Batch is set when a lot ID was scanned.</summary>
+    Task<(ProductVariant Variant, ProductBatch? Batch)?> GetByCodeAsync(string code, CancellationToken ct = default);
     Task<IReadOnlyList<ProductVariant>> GetLowStockAsync(int? take = null, CancellationToken ct = default);
 }
 

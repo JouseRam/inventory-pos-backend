@@ -65,6 +65,8 @@ public class SyncApplier(ApplicationDbContext db, ILookupNormalizer normalizer)
             {
                 e.ProductId = productId; e.SKU = v.SKU; e.Barcode = v.Barcode; e.ShadeCode = v.ShadeCode; e.ShadeName = v.ShadeName;
                 e.Size = v.Size; e.Unit = v.Unit; e.Price = v.Price; e.Cost = v.Cost; e.MinStock = v.MinStock; e.IsActive = v.IsActive;
+                // The catalog's ID wins so a label printed anywhere scans everywhere.
+                if (v.Code != null) e.Code = v.Code;
             }, ct);
         }
         await db.SaveChangesAsync(ct);
@@ -142,6 +144,7 @@ public class SyncApplier(ApplicationDbContext db, ILookupNormalizer normalizer)
             await UpsertAsync<ProductBatch>(b.Uid, overwrite: true, e =>
             {
                 e.VariantId = variantId; e.LotNumber = b.LotNumber; e.ExpirationDate = b.ExpirationDate; e.Quantity = b.Quantity; e.CreatedAt = b.CreatedAt;
+                if (b.Code != null) e.Code = b.Code;
             }, ct);
             applied++;
         }

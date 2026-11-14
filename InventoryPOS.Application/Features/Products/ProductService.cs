@@ -132,11 +132,15 @@ public class ProductService(IUnitOfWork uow, StockService stock, PosGuard guard)
         return variants.Select(v => v.ToDto()).ToList();
     }
 
-    /// <summary>Exact lookup by barcode or SKU, used by the scanner in the POS.</summary>
+    /// <summary>
+    /// Exact lookup by the system ID, a lot's ID, the barcode or the SKU, used by the scanner in the POS.
+    /// A lot label says which lot was scanned, so the sale takes the piece from that lot.
+    /// </summary>
     public async Task<VariantDto> GetVariantByCodeAsync(string code, CancellationToken ct = default)
     {
-        var variant = await uow.Variants.GetByCodeAsync(code.Trim(), ct) ?? throw new NotFoundException($"No hay producto con el código '{code}'.");
-        return variant.ToDto();
+        var found = await uow.Variants.GetByCodeAsync(code.Trim(), ct) ?? throw new NotFoundException($"No hay producto con el código '{code}'.");
+        var dto = found.Variant.ToDto();
+        return found.Batch == null ? dto : dto with { ScannedBatchId = found.Batch.Id, ScannedLot = found.Batch.LotNumber };
     }
 
     public async Task<IReadOnlyList<VariantDto>> LowStockAsync(CancellationToken ct = default) =>
@@ -155,7 +159,8 @@ public class ProductService(IUnitOfWork uow, StockService stock, PosGuard guard)
 
     private static void Apply(ProductVariant v, VariantSaveDto dto)
     {
-        v.SKU = dto.SKU.Trim().ToUpperInvariant();
+        // Without a SKU of its own the presentation is known by its system ID.
+        v.SKU = string.IsNullOrWhiteSpace(dto.SKU) ? (string.IsNullOrEmpty(v.SKU) ? v.Code! : v.SKU) : dto.SKU.Trim().ToUpperInvariant();
         v.Barcode = string.IsNullOrWhiteSpace(dto.Barcode) ? null : dto.Barcode.Trim();
         v.ShadeCode = dto.ShadeCode?.Trim();
         v.ShadeName = dto.ShadeName?.Trim();
@@ -170,10 +175,10 @@ public class ProductService(IUnitOfWork uow, StockService stock, PosGuard guard)
     private async Task<Product> LoadAsync(int id, CancellationToken ct) =>
         await uow.Products.GetWithVariantsAsync(id, ct) ?? throw NotFoundException.For("Producto", id);
 
-    private async Task EnsureUniqueCodesAsync(string sku, string? barcode, int? excludeVariantId, CancellationToken ct)
+    private async Task EnsureUniqueCodesAsync(string? sku, string? barcode, int? excludeVariantId, CancellationToken ct)
     {
-        var normalizedSku = sku.Trim().ToUpperInvariant();
-        if (await uow.Variants.AnyAsync(v => v.SKU == normalizedSku && v.Id != excludeVariantId, ct))
+        var normalizedSku = sku?.Trim().ToUpperInvariant();
+        if (!string.IsNullOrEmpty(normalizedSku) && await uow.Variants.AnyAsync(v => v.SKU == normalizedSku && v.Id != excludeVariantId, ct))
             throw new ConflictException($"El SKU '{normalizedSku}' ya está registrado.");
         if (!string.IsNullOrWhiteSpace(barcode))
         {

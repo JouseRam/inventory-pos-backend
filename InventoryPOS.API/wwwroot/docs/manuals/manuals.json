@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-14T22:26:11.259Z",
+  "generatedAt": "2026-11-14T23:27:04.719Z",
   "manuals": [
     {
       "slug": "primeros-pasos",
@@ -17,7 +17,7 @@
       "icon": "bi-upc-scan",
       "summary": "Buscar tonos, armar el ticket, cobrar con efectivo, tarjeta o transferencia, imprimir y facturar.",
       "file": "01-punto-de-venta.pdf",
-      "size": 389103
+      "size": 401529
     },
     {
       "slug": "caja",
@@ -26,7 +26,7 @@
       "icon": "bi-cash-coin",
       "summary": "Abrir la caja con su fondo, registrar entradas y retiros de efectivo y hacer el corte al final del turno.",
       "file": "02-caja.pdf",
-      "size": 263613
+      "size": 263188
     },
     {
       "slug": "ventas",
@@ -35,7 +35,7 @@
       "icon": "bi-receipt-cutoff",
       "summary": "Consultar el historial de ventas, ver el detalle de un ticket, reimprimirlo, cancelarlo o facturarlo.",
       "file": "03-ventas.pdf",
-      "size": 340210
+      "size": 339121
     },
     {
       "slug": "facturacion",
@@ -44,7 +44,7 @@
       "icon": "bi-receipt",
       "summary": "Timbrar facturas CFDI 4.0 desde la caja, descargarlas, cancelarlas y configurar, pagar o cambiar el proveedor.",
       "file": "04-facturacion.pdf",
-      "size": 588756
+      "size": 588725
     },
     {
       "slug": "productos",
@@ -53,7 +53,7 @@
       "icon": "bi-palette",
       "summary": "Dar de alta productos con sus tonos y presentaciones, precios, costos, mínimos y control por lote y caducidad.",
       "file": "05-productos.pdf",
-      "size": 440219
+      "size": 472455
     },
     {
       "slug": "existencias",
@@ -71,7 +71,16 @@
       "icon": "bi-truck",
       "summary": "Capturar la mercancía que llega del proveedor con su costo, lote y caducidad.",
       "file": "07-recepciones.pdf",
-      "size": 188390
+      "size": 190241
+    },
+    {
+      "slug": "etiquetas-y-escaner",
+      "title": "Etiquetas y escáner",
+      "module": "Products",
+      "icon": "bi-qr-code",
+      "summary": "Imprimir etiquetas con QR o código de barras en hojas carta y cobrar escaneándolas.",
+      "file": "08-etiquetas-y-escaner.pdf",
+      "size": 360039
     },
     {
       "slug": "categorias-y-marcas",
@@ -79,7 +88,7 @@
       "module": "Products",
       "icon": "bi-tags",
       "summary": "Organizar el catálogo por categorías (con subcategorías) y marcas.",
-      "file": "08-categorias-y-marcas.pdf",
+      "file": "09-categorias-y-marcas.pdf",
       "size": 114564
     },
     {
@@ -88,7 +97,7 @@
       "module": "Customers",
       "icon": "bi-person-heart",
       "summary": "Guardar a las clientas frecuentes, su tono habitual y sus datos fiscales para facturar.",
-      "file": "09-clientes.pdf",
+      "file": "10-clientes.pdf",
       "size": 350412
     },
     {
@@ -97,7 +106,7 @@
       "module": "Suppliers",
       "icon": "bi-building",
       "summary": "Registrar a los proveedores para asignarlos a los productos y a las recepciones.",
-      "file": "10-proveedores.pdf",
+      "file": "11-proveedores.pdf",
       "size": 160701
     },
     {
@@ -106,7 +115,7 @@
       "module": "Dashboard",
       "icon": "bi-speedometer2",
       "summary": "Ver de un vistazo lo vendido hoy, en la semana y en el mes, lo que falta y lo que caduca.",
-      "file": "11-resumen-del-dia.pdf",
+      "file": "12-resumen-del-dia.pdf",
       "size": 269237
     },
     {
@@ -115,8 +124,8 @@
       "module": "Reports",
       "icon": "bi-graph-up",
       "summary": "Analizar la venta, la utilidad, las formas de pago y lo más vendido por producto, marca y categoría.",
-      "file": "12-reportes.pdf",
-      "size": 235104
+      "file": "13-reportes.pdf",
+      "size": 235495
     },
     {
       "slug": "configuracion",
@@ -124,8 +133,8 @@
       "module": "Settings",
       "icon": "bi-sliders",
       "summary": "Datos del negocio, facturación, impresora, respaldos, usuarios y permisos, y la vinculación con la web.",
-      "file": "13-configuracion.pdf",
-      "size": 612631
+      "file": "14-configuracion.pdf",
+      "size": 612570
     },
     {
       "slug": "documentacion",
@@ -133,8 +142,8 @@
       "module": null,
       "icon": "bi-journal-text",
       "summary": "Dónde encontrar, leer y descargar estos manuales desde el sistema.",
-      "file": "14-documentacion.pdf",
-      "size": 287784
+      "file": "15-documentacion.pdf",
+      "size": 286483
     },
     {
       "slug": "completo",
@@ -143,7 +152,7 @@
       "icon": "bi-book",
       "summary": "Todos los manuales en un solo documento, con índice.",
       "file": "manual-completo.pdf",
-      "size": 3306371,
+      "size": 3555138,
       "complete": true
     }
   ]

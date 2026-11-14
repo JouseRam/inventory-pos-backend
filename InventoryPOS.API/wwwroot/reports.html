@@ -46,12 +46,13 @@
           api.get(`/reports/by-category?days=${days}`),
           api.get(`/reports/payment-methods?days=${days}`),
         ]);
-        const margin = summary.totalRevenue ? Math.round(summary.grossProfit / summary.totalRevenue * 100) : 0;
+        const net = summary.totalRevenue - summary.totalTax;
+        const margin = net > 0 ? Math.round(summary.grossProfit / net * 100) : 0;
         const stat = (l, v, h) => `<div class="panel stat"><div class="eyebrow">${l}</div><div class="value">${v}</div><div class="hint">${h}</div></div>`;
         $('#stats').innerHTML = [
           stat('Venta', fmt.money(summary.totalRevenue), `${summary.totalSales} tickets`),
           stat('Ticket promedio', fmt.money(summary.averageTicket), 'por venta completada'),
-          stat('Utilidad bruta', fmt.money(summary.grossProfit), `${margin}% sobre venta, a costo de compra`),
+          stat('Utilidad bruta', fmt.money(summary.grossProfit), `${margin}% sobre la venta sin IVA, a costo de compra`),
           stat('Descuentos', fmt.money(summary.totalDiscount), `IVA incluido ${fmt.money(summary.totalTax)}`),
         ].join('');
         $('#range').textContent = `${fmt.day(summary.from)} – ${fmt.day(summary.to)}`;

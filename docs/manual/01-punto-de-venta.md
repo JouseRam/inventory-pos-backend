@@ -20,7 +20,7 @@ La caja debe estar **abierta**. Si no lo está, el punto de venta te pide el **f
 1. Pulsa <kbd>F2</kbd> (o haz clic en el buscador).
 2. Escribe el **número del tono** (por ejemplo `7.1`), el nombre, la marca o el SKU. Aparecen todas las marcas que tienen ese tono.
 3. Haz clic en la tarjeta para agregarla al ticket. Si la vuelves a elegir, suma una pieza.
-4. Con un **lector de código de barras**, escanea el producto: con el código o el SKU exacto se agrega directo.
+4. Con el **escáner**, lee la **etiqueta** del producto (QR o código de barras), el código del fabricante o escribe su SKU o ID y pulsa Enter: se agrega directo. El escaneo funciona aunque el cursor no esté en el buscador.
 
 En el ticket puedes cambiar la cantidad o quitar un renglón. El sistema no deja vender más de lo que hay en existencia y avisa si un producto está agotado.
 
@@ -57,7 +57,7 @@ Si el cobro incluye efectivo y está activado, el **cajón** se abre solo.
 
 ## Productos con lote y caducidad
 
-En tintes, oxidantes y químicos el sistema descuenta primero las piezas del **lote que caduca antes**. No tienes que elegir el lote al vender.
+En tintes, oxidantes y químicos el sistema descuenta primero las piezas del **lote que caduca antes**. Si escaneas la **etiqueta de un lote**, el renglón muestra **Lote …** y la pieza se descuenta de ese lote, para que el inventario por lote coincida con el anaquel.
 
 ## Problemas comunes
 

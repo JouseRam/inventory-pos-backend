@@ -2,11 +2,13 @@
 POS.boot({ module: 'Products', title: 'Productos' }, async () => {
   const { api, session, fmt, esc, shade, toast, fail, confirmBox, formData, fillForm, $, $$ } = POS;
   const canEdit = POS.canAdmin('Products');
-  const [categories, brands, suppliers, catalogs] = await Promise.all([
+  const [categories, brands, suppliers, catalogs, settings] = await Promise.all([
     api.get('/categories'), api.get('/brands'),
     session.can('Suppliers') ? api.get('/suppliers') : Promise.resolve([]),
-    api.get('/catalogs'),
+    api.get('/catalogs'), api.get('/settings').catch(() => []),
   ]);
+  // Prices include IVA; profit is counted on the price before tax, as in the reports.
+  const taxRate = Number(settings.find(s => s.key === 'TaxRate')?.value ?? 16) / 100;
   const units = catalogs.units;
   let products = [];
   let editing = null;
@@ -48,11 +50,12 @@ POS.boot({ module: 'Products', title: 'Productos' }, async () => {
           ${p.isActive ? '' : '<span class="pill">Inactivo</span>'}
           <span class="grow"></span>
           <span class="muted num">${fmt.qty(p.totalStock)} en existencia</span>
+          <button class="btn ghost sm" type="button" data-labels="${p.id}" title="Etiquetas con código para sus piezas"><i class="bi bi-qr-code"></i>Etiquetas</button>
           ${canEdit ? `<button class="btn ghost sm" type="button" data-edit="${p.id}"><i class="bi bi-pencil"></i>Editar</button>` : ''}
         </div>
         <div class="variants">${p.variants.map(v => `
           <button class="vchip ${v.lowStock && v.isActive ? 'low' : ''} ${v.isActive ? '' : 'off'}" type="button" data-variant="${v.id}" data-product="${p.id}"
-            title="${esc(v.sku)}${v.barcode ? ' · ' + esc(v.barcode) : ''}">
+            title="ID ${esc(v.code || '')} · SKU ${esc(v.sku)}${v.barcode ? ' · ' + esc(v.barcode) : ''}">
             ${shade.swatch(v.shadeCode, 'sm')}
             ${v.shadeCode ? `<span class="shade-code">${esc(v.shadeCode)}</span>` : `<span class="mono">${esc(v.sku)}</span>`}
             ${v.size ? `<span class="muted">${fmt.qty(v.size)} ${esc(v.unit)}</span>` : ''}
@@ -71,14 +74,16 @@ POS.boot({ module: 'Products', title: 'Productos' }, async () => {
   // ── Variant fields (shared by the product form rows and the variant dialog) ──
   function variantFields(v = {}, { withStock = false } = {}) {
     return `
-      <label class="field"><span>Tono</span><input name="shadeCode" value="${esc(v.shadeCode)}" maxlength="20" class="mono" placeholder="7.1"></label>
-      <label class="field"><span>Nombre del tono</span><input name="shadeName" value="${esc(v.shadeName)}" maxlength="100" placeholder="Rubio medio ceniza"></label>
-      <label class="field"><span>SKU</span><input name="sku" value="${esc(v.sku)}" required maxlength="50" class="mono"></label>
-      <label class="field"><span>Código de barras</span><input name="barcode" value="${esc(v.barcode)}" maxlength="50" class="mono"></label>
-      <label class="field"><span>Contenido</span><input name="size" type="number" min="0" step="0.01" value="${v.size ?? ''}" data-type="nullable-number"></label>
-      <label class="field"><span>Unidad</span><select name="unit">${units.map(u => `<option ${u === (v.unit || 'pza') ? 'selected' : ''}>${u}</option>`).join('')}</select></label>
-      <label class="field"><span>Precio</span><input name="price" type="number" min="0" step="0.01" value="${v.price ?? ''}" required data-type="number" class="mono"></label>
-      <label class="field"><span>Costo</span><input name="cost" type="number" min="0" step="0.01" value="${v.cost ?? ''}" data-type="number" class="mono"></label>
+      <label class="field"><span>Tono o color <small class="muted">(opcional)</small></span><input name="shadeCode" value="${esc(v.shadeCode)}" maxlength="20" class="mono" placeholder="7.1"></label>
+      <label class="field"><span>Nombre del tono o color</span><input name="shadeName" value="${esc(v.shadeName)}" maxlength="100" placeholder="Rubio medio ceniza, Negro…"></label>
+      <label class="field"><span>Contenido</span><input name="size" type="number" min="0" step="0.01" value="${v.size ?? ''}" data-type="nullable-number" placeholder="60"></label>
+      <label class="field"><span>Unidad</span><select name="unit">${units.map(u => `<option ${u === (v.unit || 'ml') ? 'selected' : ''}>${u}</option>`).join('')}</select></label>
+      <label class="field"><span>Costo (precio del proveedor)</span><input name="cost" type="number" min="0" step="0.01" value="${v.cost ?? ''}" data-type="number" class="mono"></label>
+      <label class="field"><span>Precio de venta (con IVA)</span><input name="price" type="number" min="0" step="0.01" value="${v.price ?? ''}" required data-type="number" class="mono"></label>
+      <div class="profit span-2" data-profit></div>
+      <label class="field"><span>SKU <small class="muted">(opcional)</small></span><input name="sku" value="${esc(v.sku)}" maxlength="50" class="mono" placeholder="Automático"></label>
+      <label class="field"><span>Código de barras del fabricante</span><input name="barcode" value="${esc(v.barcode)}" maxlength="50" class="mono"></label>
+      ${v.code ? `<div class="field"><span>ID del sistema</span><b class="mono" style="padding:8px 0">${esc(v.code)}</b></div>` : ''}
       <label class="field"><span>Mínimo</span><input name="minStock" type="number" min="0" step="1" value="${v.minStock ?? 3}" data-type="number"></label>
       ${withStock ? `
         <label class="field"><span>Existencia inicial</span><input name="initialStock" type="number" min="0" step="1" value="0" data-type="number"></label>
@@ -86,7 +91,27 @@ POS.boot({ module: 'Products', title: 'Productos' }, async () => {
         <label class="field lot-field"><span>Caducidad</span><input name="expirationDate" type="date"></label>` : ''}
       <div class="preview"></div>`;
   }
+  /** Profit per piece before IVA (the tax in the price belongs to the SAT) and its margin, as the user types. */
+  function wireProfit(row) {
+    const box = row.querySelector('[data-profit]');
+    if (!box) return;
+    const update = () => {
+      const price = Number(row.querySelector('[name=price]').value) || 0;
+      const cost = Number(row.querySelector('[name=cost]').value) || 0;
+      if (!price) { box.innerHTML = '<span class="muted">Captura costo y precio para ver la ganancia.</span>'; return; }
+      const net = price / (1 + taxRate);
+      const profit = net - cost;
+      const margin = net > 0 ? Math.round(profit / net * 100) : 0;
+      box.className = `profit span-2 ${profit < 0 ? 'loss' : ''}`;
+      box.innerHTML = `<i class="bi bi-graph-up-arrow"></i><span>Ganancia por pieza <b class="mono">${fmt.money(profit)}</b> · margen <b>${margin} %</b>
+        <small class="muted">(sobre ${fmt.money(net)} sin IVA)</small></span>`;
+    };
+    row.querySelectorAll('[name=price],[name=cost]').forEach(el => el.addEventListener('input', update));
+    update();
+  }
+
   function wirePreview(row) {
+    wireProfit(row);
     const update = () => {
       const code = row.querySelector('[name=shadeCode]').value;
       const desc = shade.describe(code);
@@ -150,8 +175,12 @@ POS.boot({ module: 'Products', title: 'Productos' }, async () => {
         toast('Producto actualizado.');
       } else {
         data.variants = $$('.vrow', pd).map(readRow);
-        await api.post('/products', data);
-        toast('Producto creado.');
+        const created = await api.post('/products', data);
+        toast('Producto creado. Imprime sus etiquetas.');
+        pd.close();
+        await load();
+        await printLabels(created.id, created.name);
+        return;
       }
       pd.close();
       await load();
@@ -197,7 +226,13 @@ POS.boot({ module: 'Products', title: 'Productos' }, async () => {
     } catch (ex) { err.textContent = ex.message; err.hidden = false; }
   });
 
+  async function printLabels(productId, name) {
+    try { POS.labels.open(await api.get(`/labels/product/${productId}`), { title: name }); } catch (err) { fail(err); }
+  }
+
   $('#list').addEventListener('click', e => {
+    const labels = e.target.closest('[data-labels]');
+    if (labels) { printLabels(Number(labels.dataset.labels), products.find(p => p.id === Number(labels.dataset.labels))?.name); return; }
     const edit = e.target.closest('[data-edit]');
     const chip = e.target.closest('[data-variant]');
     const add = e.target.closest('[data-add-variant]');

@@ -20,7 +20,7 @@ La lista muestra cada recepción con su folio, fecha, proveedor, factura o remis
    - **Lote** y **Caducidad** en productos con control por lote.
 4. Pulsa **Registrar recepción**.
 
-Las existencias suben al momento y el costo de la presentación se actualiza.
+Las existencias suben al momento y el costo de la presentación se actualiza. Cada lote nuevo recibe su **ID** y se abre la impresión de **etiquetas**, una por pieza recibida. Para reimprimirlas, abre la recepción y pulsa **Imprimir etiquetas**.
 
 > Si un mismo tono llega en dos lotes con distinta caducidad, captura **un renglón por lote**.
 

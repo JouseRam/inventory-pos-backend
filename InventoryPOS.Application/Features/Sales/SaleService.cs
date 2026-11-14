@@ -66,7 +66,7 @@ public class SaleService(
                     Discount = Money.Round(line.Discount),
                     Subtotal = subtotal,
                 });
-                await stock.RemoveAsync(variant, line.Quantity, MovementTypes.Sale, folio, null, ct);
+                await stock.RemoveAsync(variant, line.Quantity, MovementTypes.Sale, folio, null, ct, line.BatchId);
             }
 
             sale.Subtotal = sale.Items.Sum(i => i.Subtotal);

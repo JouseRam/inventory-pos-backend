@@ -58,7 +58,10 @@ async function seed() {
   const category = async (name, description) => (await call('POST', '/categories', { name, description })).id;
   const supplier = async (name, contactName, phone) => (await call('POST', '/suppliers', { name, contactName, phone })).id;
   const brands = { igora: await brand('Igora Royal'), majirel: await brand('Majirel'), koleston: await brand('Koleston Perfect'), olaplex: await brand('Olaplex') };
-  const cats = { tintes: await category('Tintes', 'Coloración permanente'), oxidantes: await category('Oxidantes', 'Reveladores en crema'), cuidado: await category('Cuidado', 'Shampoo y tratamientos') };
+  // The categories every store starts with (Cabello › Tintes…), so labels show category and subcategory.
+  const existing = await call('GET', '/categories');
+  const cat = name => existing.find(c => c.name === name)?.id ?? category(name, null);
+  const cats = { tintes: await cat('Tintes'), oxidantes: await cat('Decolorantes y oxidantes'), cuidado: await cat('Tratamientos') };
   const sups = { bella: await supplier('Distribuidora Bella', 'Laura Pérez', '55 4120 3311'), salon: await supplier('Salón Pro Mayoreo', 'Jorge Ruiz', '771 220 9080') };
 
   const product = async (name, brandId, categoryId, supplierId, tracksBatches, variants) =>
@@ -107,7 +110,12 @@ async function seed() {
 const SHOTS = [
   { name: 'login', url: '/login.html', signedOut: true },
   { name: 'menu', url: '/dashboard.html', full: false },
-  { name: 'pos', url: '/pos.html', prepare: async p => { await p.fill('#search', '7.1'); await p.waitForTimeout(900); await p.click('#results .shade-card'); await p.waitForTimeout(300); } },
+  { name: 'pos', url: '/pos.html', prepare: async p => {
+      await p.fill('#search', '7.1'); await p.waitForTimeout(900); await p.click('#results .shade-card'); await p.waitForTimeout(300);
+      // A scanned lot label: the ticket line shows which lot it comes from.
+      const code = await p.evaluate(async () => (await POS.api.get('/labels/product/' + (await POS.api.get('/products?q=Majirel'))[0].id))[0].code);
+      await p.evaluate(() => document.activeElement?.blur()); await p.keyboard.type(code, { delay: 5 }); await p.keyboard.press('Enter');
+      await p.waitForTimeout(700); } },
   { name: 'pos-pay', url: '/pos.html', prepare: async p => {
       await p.fill('#search', '7.1'); await p.waitForTimeout(900); await p.click('#results .shade-card'); await p.waitForTimeout(300);
       await p.click('#pay-btn'); await p.waitForTimeout(400); await p.fill('#pay-cash', '400'); await p.dispatchEvent('#pay-cash', 'input'); await p.waitForTimeout(300); } },
@@ -117,7 +125,17 @@ const SHOTS = [
   { name: 'invoice-form', url: '/sales.html', prepare: async p => {
       await p.locator('#list [data-id]').last().click(); await p.waitForTimeout(700); await p.click('#invoice-btn'); await p.waitForTimeout(900); } },
   { name: 'products', url: '/products.html' },
-  { name: 'product-edit', url: '/products.html', prepare: async p => { await p.click('[data-new], #new-product, button:has-text("Nuevo producto")'); await p.waitForTimeout(600); } },
+  { name: 'product-edit', url: '/products.html', prepare: async p => {
+      await p.click('#new-product'); await p.waitForTimeout(500);
+      await p.fill('#product-dialog [name=name]', 'Delineador líquido Precision');
+      await p.selectOption('#p-category', { label: 'Maquillaje' }).catch(() => {});
+      const row = p.locator('.vrow').first();
+      await row.locator('[name=shadeName]').fill('Negro intenso');
+      await row.locator('[name=size]').fill('2.5'); await row.locator('[name=unit]').selectOption('ml');
+      await row.locator('[name=cost]').fill('68'); await row.locator('[name=price]').fill('149');
+      await row.locator('[name=initialStock]').fill('12'); await p.waitForTimeout(300); } },
+  { name: 'labels-dialog', url: '/products.html', prepare: async p => {
+      await p.locator('.prod', { hasText: 'Igora Royal' }).first().locator('[data-labels]').click(); await p.waitForTimeout(900); } },
   { name: 'inventory', url: '/inventory.html' },
   { name: 'purchases', url: '/purchases.html' },
   { name: 'catalogs', url: '/catalogs.html' },

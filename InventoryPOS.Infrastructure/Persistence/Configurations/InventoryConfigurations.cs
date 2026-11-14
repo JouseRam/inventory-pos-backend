@@ -24,6 +24,8 @@ public class ProductVariantConfiguration : IEntityTypeConfiguration<ProductVaria
     public void Configure(EntityTypeBuilder<ProductVariant> e)
     {
         e.ToTable("ProductVariants");
+        e.Property(x => x.Code).HasMaxLength(12);
+        e.HasIndex(x => x.Code).IsUnique();
         e.Property(x => x.SKU).HasMaxLength(50).IsRequired();
         e.Property(x => x.Barcode).HasMaxLength(50);
         e.Property(x => x.ShadeCode).HasMaxLength(20);
@@ -48,6 +50,8 @@ public class ProductBatchConfiguration : IEntityTypeConfiguration<ProductBatch>
     public void Configure(EntityTypeBuilder<ProductBatch> e)
     {
         e.ToTable("ProductBatches");
+        e.Property(x => x.Code).HasMaxLength(12);
+        e.HasIndex(x => x.Code).IsUnique();
         e.Property(x => x.LotNumber).HasMaxLength(50).IsRequired();
         e.Property(x => x.ExpirationDate).HasColumnType("date");
         e.Property(x => x.Quantity).HasPrecision(18, 3);

@@ -25,6 +25,8 @@ public class Product : BaseEntity
 public class ProductVariant : BaseEntity
 {
     public int ProductId { get; set; }
+    /// <summary>The system's ID for this presentation (P + 8), printed on its labels and searchable everywhere.</summary>
+    public string? Code { get; set; } = ItemCode.New(ItemCode.VariantPrefix);
     public string SKU { get; set; } = string.Empty;
     public string? Barcode { get; set; }
     /// <summary>Shade code as printed on the box, e.g. 7.1.</summary>
@@ -56,6 +58,8 @@ public class ProductVariant : BaseEntity
 public class ProductBatch : BaseEntity
 {
     public int VariantId { get; set; }
+    /// <summary>The system's ID for this lot (L + 8): its labels sell from this very lot.</summary>
+    public string? Code { get; set; } = ItemCode.New(ItemCode.BatchPrefix);
     public string LotNumber { get; set; } = string.Empty;
     public DateTime? ExpirationDate { get; set; }
     public decimal Quantity { get; set; }

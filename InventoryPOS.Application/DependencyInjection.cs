@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<PosGuard>();
         services.AddScoped<InvoicingAccountService>();
         services.AddScoped<InvoiceService>();
+        services.AddScoped<Features.Labels.LabelService>();
         return services;
     }
 }

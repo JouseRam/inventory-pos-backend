@@ -31,7 +31,7 @@ public class SyncMapper(ApplicationDbContext db)
     public async Task<List<VariantSync>> VariantsAsync(DateTime? since, CancellationToken ct) =>
         await db.ProductVariants.AsNoTracking().Where(Changed<ProductVariant>(since))
             .Select(v => new VariantSync(v.Uid, v.Product.Uid, v.SKU, v.Barcode, v.ShadeCode, v.ShadeName, v.Size, v.Unit,
-                v.Price, v.Cost, v.MinStock, v.IsActive)).ToListAsync(ct);
+                v.Price, v.Cost, v.MinStock, v.IsActive, v.Code)).ToListAsync(ct);
 
     public async Task<List<CustomerSync>> CustomersAsync(DateTime? since, IReadOnlyCollection<Guid>? uids, CancellationToken ct)
     {
@@ -63,7 +63,7 @@ public class SyncMapper(ApplicationDbContext db)
 
     public async Task<List<BatchSync>> BatchesAsync(IReadOnlyCollection<Guid> uids, CancellationToken ct) =>
         await db.ProductBatches.AsNoTracking().Where(b => uids.Contains(b.Uid))
-            .Select(b => new BatchSync(b.Uid, b.Variant.Uid, b.LotNumber, b.ExpirationDate, b.Quantity, b.CreatedAt)).ToListAsync(ct);
+            .Select(b => new BatchSync(b.Uid, b.Variant.Uid, b.LotNumber, b.ExpirationDate, b.Quantity, b.CreatedAt, b.Code)).ToListAsync(ct);
 
     public async Task<List<MovementSync>> MovementsAsync(IReadOnlyCollection<Guid> uids, CancellationToken ct) =>
         await db.InventoryMovements.AsNoTracking().Where(m => uids.Contains(m.Uid))

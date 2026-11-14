@@ -31,15 +31,17 @@ public record CustomerSync(Guid Uid, string Name, string? Phone, string? Email, 
 public record ProductSync(Guid Uid, string Name, string? Description, Guid? BrandUid, Guid? CategoryUid, Guid? SupplierUid,
     bool TracksBatches, bool IsActive);
 /// <summary>Catalog data of a variant; stock is owned by the register and travels separately.</summary>
+/// <remarks>Code is optional so installations on different versions still sync; an older sender leaves the ID as it is.</remarks>
 public record VariantSync(Guid Uid, Guid ProductUid, string SKU, string? Barcode, string? ShadeCode, string? ShadeName, decimal? Size,
-    string Unit, decimal Price, decimal Cost, decimal MinStock, bool IsActive);
+    string Unit, decimal Price, decimal Cost, decimal MinStock, bool IsActive, string? Code = null);
 public record SettingSync(string Key, string? Value, string Label, string Type, string Group);
 public record PermissionSync(string Module, bool CanView, bool CanEdit);
 /// <summary>Accounts with their password hash so cashiers can sign in at the register without internet.</summary>
 public record UserSync(string Id, string UserName, string? Email, string FullName, bool IsSuperAdmin, bool IsActive,
     string? PasswordHash, string? SecurityStamp, IReadOnlyList<PermissionSync> Permissions);
 
-public record BatchSync(Guid Uid, Guid VariantUid, string LotNumber, DateTime? ExpirationDate, decimal Quantity, DateTime CreatedAt);
+public record BatchSync(Guid Uid, Guid VariantUid, string LotNumber, DateTime? ExpirationDate, decimal Quantity, DateTime CreatedAt,
+    string? Code = null);
 public record MovementSync(Guid Uid, Guid VariantUid, Guid? BatchUid, string Type, decimal Quantity, decimal StockAfter, decimal UnitCost,
     string? Reference, string? Notes, string? UserId, DateTime CreatedAt);
 public record PurchaseItemSync(Guid Uid, Guid VariantUid, decimal Quantity, decimal UnitCost, decimal Subtotal, string? LotNumber,

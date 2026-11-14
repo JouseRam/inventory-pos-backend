@@ -16,7 +16,7 @@ Elige el **Periodo** arriba: **7 días**, **30 días**, **90 días** o **12 mese
 |---|---|
 | **Venta** | Lo vendido en el periodo y el número de tickets |
 | **Ticket promedio** | Venta entre número de ventas completadas |
-| **Utilidad bruta** | Venta menos el costo de compra de lo vendido, y su margen en % |
+| **Utilidad bruta** | Venta sin IVA menos el costo de compra de lo vendido, y su margen en % |
 | **Descuentos** | Lo descontado en el periodo y el IVA incluido en la venta |
 
 ## Gráficas

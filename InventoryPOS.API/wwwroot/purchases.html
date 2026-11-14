@@ -50,11 +50,14 @@
       <form method="dialog">
         <header><h2 id="detail-title">Recepción</h2><button class="btn ghost icon-btn" value="cancel" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button></header>
         <div class="body" id="detail-body"></div>
+        <footer><button class="btn" type="button" id="detail-labels"><i class="bi bi-qr-code"></i>Imprimir etiquetas</button><button class="btn" value="cancel">Cerrar</button></footer>
       </form>
     </dialog>
   </main>
   <script src="js/core.js"></script>
   <script src="js/picker.js"></script>
+  <script src="vendor/qrcode/qrcode.js"></script>
+  <script src="js/labels.js"></script>
   <script>
     POS.boot({ module: 'Purchases', title: 'Recepciones' }, async () => {
       const { api, session, fmt, esc, toast, $, $$ } = POS;
@@ -81,7 +84,7 @@
       $('#list').addEventListener('click', async e => {
         const row = e.target.closest('[data-id]');
         if (!row) return;
-        const p = await api.get('/purchases/' + row.dataset.id);
+        const p = shown = await api.get('/purchases/' + row.dataset.id);
         $('#detail-title').innerHTML = `Recepción <span class="mono">${esc(p.folio)}</span>`;
         $('#detail-body').innerHTML = `
           <div class="muted">${fmt.dateTime(p.createdAt)} · ${esc(p.supplierName || 'Sin proveedor')}${p.invoiceNumber ? ' · Factura <span class="mono">' + esc(p.invoiceNumber) + '</span>' : ''}</div>
@@ -93,6 +96,12 @@
           ${p.notes ? `<p class="muted" style="margin:0">${esc(p.notes)}</p>` : ''}`;
         $('#detail-dialog').showModal();
       });
+      let shown = null;
+      // One label per piece received, on the lot it came in.
+      const printLabels = async p => {
+        try { POS.labels.open(await api.get(`/labels/purchase/${p.id}`), { title: `Recepción ${p.folio}` }); } catch (err) { POS.fail(err); }
+      };
+      $('#detail-labels').addEventListener('click', () => shown && printLabels(shown));
 
       // ── Receive form ──
       const dlg = $('#receive-dialog');
@@ -150,9 +159,10 @@
               expirationDate: r.querySelector('.r-exp').value || null,
             })),
           });
-          toast(`Recepción ${p.folio} registrada.`);
+          toast(`Recepción ${p.folio} registrada. Imprime sus etiquetas.`);
           dlg.close();
           await load();
+          await printLabels(p);
         } catch (ex) { err.textContent = ex.message; err.hidden = false; }
       });
 

@@ -1,3 +1,4 @@
+using InventoryPOS.Domain.Common;
 using InventoryPOS.Application.Features.Settings;
 using InventoryPOS.Domain.Constants;
 using InventoryPOS.Domain.Entities;
@@ -20,8 +21,18 @@ public class DbSeeder(ApplicationDbContext db, UserManager<AppUser> users, IConf
         await SeedFolioSequencesAsync(ct);
         await SeedSettingsAsync(ct);
         await SeedCategoriesAsync(ct);
+        await AssignItemCodesAsync(ct);
         await db.SaveChangesAsync(ct);
         await SeedAdminAsync();
+    }
+
+    /// <summary>Presentations and lots created before system IDs existed get theirs (new ones get it when created).</summary>
+    private async Task AssignItemCodesAsync(CancellationToken ct)
+    {
+        foreach (var v in await db.ProductVariants.Where(v => v.Code == null).ToListAsync(ct))
+            v.Code = ItemCode.New(ItemCode.VariantPrefix);
+        foreach (var b in await db.ProductBatches.Where(b => b.Code == null).ToListAsync(ct))
+            b.Code = ItemCode.New(ItemCode.BatchPrefix);
     }
 
     private async Task SeedFolioSequencesAsync(CancellationToken ct)

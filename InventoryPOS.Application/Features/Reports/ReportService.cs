@@ -94,7 +94,8 @@ public class ReportService(IReportQueries queries, IUnitOfWork uow, IDateTimePro
         var start = (from ?? end.AddDays(-30)).Date;
         var totals = await TotalsAsync(start, end, ct);
         return new SalesSummaryDto(start, end, totals.Count, totals.Total, totals.Discount, totals.Tax,
-            totals.Count > 0 ? Money.Round(totals.Total / totals.Count) : 0, totals.Total - totals.Cost);
+            // The IVA included in the prices belongs to the SAT, so profit is the sale before tax minus what the pieces cost.
+            totals.Count > 0 ? Money.Round(totals.Total / totals.Count) : 0, totals.Total - totals.Tax - totals.Cost);
     }
 
     private Task<SalesTotals> TotalsAsync(DateTime fromLocal, DateTime toLocal, CancellationToken ct)

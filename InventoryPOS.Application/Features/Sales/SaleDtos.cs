@@ -4,8 +4,8 @@ using InventoryPOS.Domain.Entities;
 
 namespace InventoryPOS.Application.Features.Sales;
 
-/// <summary>UnitPrice null uses the variant's list price.</summary>
-public record SaleItemSaveDto(int VariantId, decimal Quantity, decimal? UnitPrice, decimal Discount = 0);
+/// <summary>UnitPrice null uses the variant's list price. BatchId is the lot whose label was scanned: it is sold first.</summary>
+public record SaleItemSaveDto(int VariantId, decimal Quantity, decimal? UnitPrice, decimal Discount = 0, int? BatchId = null);
 
 /// <summary>Amount is what the customer hands over; cash may exceed the total and produces change.</summary>
 public record SalePaymentSaveDto(string Method, decimal Amount, string? Reference);

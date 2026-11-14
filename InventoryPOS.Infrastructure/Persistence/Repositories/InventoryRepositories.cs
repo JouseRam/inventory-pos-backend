@@ -23,9 +23,11 @@ public class ProductRepository(ApplicationDbContext db) : Repository<Product>(db
         if (!string.IsNullOrWhiteSpace(q))
         {
             var term = q.Trim();
+            var id = ItemCode.Normalize(term);
             query = query.Where(p => p.Name.Contains(term)
                 || (p.Brand != null && p.Brand.Name.Contains(term))
                 || p.Variants.Any(v => v.SKU.Contains(term) || (v.Barcode != null && v.Barcode == term)
+                    || (id != null && (v.Code == id || v.Batches.Any(b => b.Code == id)))
                     || (v.ShadeCode != null && v.ShadeCode.StartsWith(term)) || (v.ShadeName != null && v.ShadeName.Contains(term))));
         }
         return await query.OrderBy(p => p.Name).ToListAsync(ct);
@@ -47,9 +49,11 @@ public class ProductVariantRepository(ApplicationDbContext db) : Repository<Prod
 
     public async Task<IReadOnlyList<ProductVariant>> SearchAsync(string q, int take, CancellationToken ct = default)
     {
+        var id = ItemCode.Normalize(q);
         var matches = await WithProduct.AsNoTracking()
             .Where(v => v.IsActive && v.Product.IsActive &&
                 (v.Product.Name.Contains(q) || v.SKU.Contains(q) || v.Barcode == q
+                 || (id != null && (v.Code == id || v.Batches.Any(b => b.Code == id)))
                  || (v.ShadeCode != null && v.ShadeCode.StartsWith(q)) || (v.ShadeName != null && v.ShadeName.Contains(q))
                  || (v.Product.Brand != null && v.Product.Brand.Name.Contains(q))))
             .OrderBy(v => v.Product.Name).ThenBy(v => v.ShadeCode)
@@ -58,10 +62,21 @@ public class ProductVariantRepository(ApplicationDbContext db) : Repository<Prod
         return matches.OrderBy(v => v.Product.Name).ThenBy(v => v.ShadeCode).ThenBy(v => v.Size).ToList();
     }
 
-    public Task<ProductVariant?> GetByCodeAsync(string code, CancellationToken ct = default) =>
-        WithProduct.AsNoTracking()
-            .Where(v => v.IsActive && v.Product.IsActive && (v.Barcode == code || v.SKU == code.ToUpper()))
+    public async Task<(ProductVariant Variant, ProductBatch? Batch)?> GetByCodeAsync(string code, CancellationToken ct = default)
+    {
+        var id = ItemCode.Normalize(code);
+        if (id != null && id[0] == ItemCode.BatchPrefix)
+        {
+            var batch = await Db.Set<ProductBatch>().AsNoTracking()
+                .Include(b => b.Variant).ThenInclude(v => v.Product).ThenInclude(p => p.Brand)
+                .FirstOrDefaultAsync(b => b.Code == id && b.Variant.IsActive && b.Variant.Product.IsActive, ct);
+            if (batch != null) return (batch.Variant, batch);
+        }
+        var variant = await WithProduct.AsNoTracking()
+            .Where(v => v.IsActive && v.Product.IsActive && ((id != null && v.Code == id) || v.Barcode == code || v.SKU == code.ToUpper()))
             .FirstOrDefaultAsync(ct);
+        return variant == null ? null : (variant, null);
+    }
 
     public async Task<IReadOnlyList<ProductVariant>> GetLowStockAsync(int? take = null, CancellationToken ct = default)
     {

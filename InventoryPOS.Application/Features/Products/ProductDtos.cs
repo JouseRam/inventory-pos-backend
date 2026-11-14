@@ -7,7 +7,8 @@ namespace InventoryPOS.Application.Features.Products;
 public record VariantDto(
     int Id, int ProductId, string ProductName, string? BrandName, string DisplayName,
     string SKU, string? Barcode, string? ShadeCode, string? ShadeName, decimal? Size, string Unit,
-    decimal Price, decimal Cost, decimal Stock, decimal MinStock, bool LowStock, bool TracksBatches, bool IsActive);
+    decimal Price, decimal Cost, decimal Stock, decimal MinStock, bool LowStock, bool TracksBatches, bool IsActive,
+    string? Code = null, int? ScannedBatchId = null, string? ScannedLot = null);
 
 public record ProductDto(
     int Id, string Name, string? Description,
@@ -15,8 +16,9 @@ public record ProductDto(
     bool TracksBatches, bool IsActive, decimal TotalStock, bool HasLowStock, DateTime CreatedAt, DateTime? UpdatedAt,
     IReadOnlyList<VariantDto> Variants);
 
+/// <summary>SKU empty takes the system ID.</summary>
 public record VariantSaveDto(
-    string SKU, string? Barcode, string? ShadeCode, string? ShadeName, decimal? Size, string? Unit,
+    string? SKU, string? Barcode, string? ShadeCode, string? ShadeName, decimal? Size, string? Unit,
     decimal Price, decimal Cost, decimal MinStock, bool IsActive = true,
     decimal InitialStock = 0, string? LotNumber = null, DateTime? ExpirationDate = null);
 
@@ -32,7 +34,7 @@ internal static class ProductMappings
     public static VariantDto ToDto(this ProductVariant v) => new(
         v.Id, v.ProductId, v.Product.Name, v.Product.Brand?.Name, v.DisplayName(),
         v.SKU, v.Barcode, v.ShadeCode, v.ShadeName, v.Size, v.Unit,
-        v.Price, v.Cost, v.Stock, v.MinStock, v.Stock <= v.MinStock, v.Product.TracksBatches, v.IsActive);
+        v.Price, v.Cost, v.Stock, v.MinStock, v.Stock <= v.MinStock, v.Product.TracksBatches, v.IsActive, v.Code);
 
     public static ProductDto ToDto(this Product p, bool includeInactiveVariants = false)
     {
@@ -51,7 +53,7 @@ public class VariantSaveValidator : AbstractValidator<VariantSaveDto>
 {
     public VariantSaveValidator()
     {
-        RuleFor(x => x.SKU).NotEmpty().WithMessage("El SKU es requerido.").MaximumLength(50);
+        RuleFor(x => x.SKU).MaximumLength(50);
         RuleFor(x => x.Barcode).MaximumLength(50);
         RuleFor(x => x.ShadeCode).MaximumLength(20);
         RuleFor(x => x.ShadeName).MaximumLength(100);
@@ -74,8 +76,8 @@ public class ProductCreateValidator : AbstractValidator<ProductCreateDto>
         RuleFor(x => x.Variants).NotEmpty().WithMessage("Agrega al menos una presentación (variante).");
         RuleForEach(x => x.Variants).SetValidator(new VariantSaveValidator());
         RuleFor(x => x.Variants)
-            .Must(v => v.Select(x => x.SKU.Trim().ToUpperInvariant()).Distinct().Count() == v.Count)
-            .When(x => x.Variants != null && x.Variants.All(v => !string.IsNullOrWhiteSpace(v.SKU)))
+            .Must(v => { var skus = v.Where(x => !string.IsNullOrWhiteSpace(x.SKU)).Select(x => x.SKU!.Trim().ToUpperInvariant()).ToList(); return skus.Distinct().Count() == skus.Count; })
+            .When(x => x.Variants != null)
             .WithMessage("Hay SKUs repetidos entre las variantes.");
     }
 }
