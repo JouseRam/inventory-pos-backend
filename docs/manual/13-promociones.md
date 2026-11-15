@@ -34,7 +34,7 @@ WhatsApp Business permite mandar el mismo mensaje a muchos contactos con una **l
 
 1. Pulsa **Descargar contactos (.vcf)**. Se descarga un archivo con los clientes elegidos.
 2. Ábrelo en el celular de la tienda (por correo, Drive o cable) para **guardar los contactos**. Ya guardados, no hace falta repetirlo.
-3. En WhatsApp Business: menú **⋮ › Nueva difusión**, elige a esos contactos y crea la lista (por ejemplo *Promociones Matiz*).
+3. En WhatsApp Business: menú **⋮ › Nueva difusión**, elige a esos contactos y crea la lista (por ejemplo *Promociones Anna’s*).
 4. En el sistema pulsa **Copiar imagen** y pégala en la difusión; luego **Copiar mensaje** y pégalo. Envía.
 5. Pulsa **Marcar todos como enviados**.
 

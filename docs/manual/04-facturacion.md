@@ -33,7 +33,7 @@ En **Configuración → Facturación** aparece una tarjeta por proveedor con su 
 |---|---|---|
 | Cobro | Anual: módulo API + folios en prepago | Mensual: suscripción + cargo por factura |
 | Credenciales | Usuario y contraseña | Llave secreta (`sk_test_…` o `sk_live_…`) |
-| CSD | Se sube desde Matiz POS | Se sube en el panel de Facturapi |
+| CSD | Se sube desde Anna’s Beauty Supply POS | Se sube en el panel de Facturapi |
 | Pruebas | Ambiente de pruebas gratis | Llave `sk_test_` gratis |
 
 Botones de cada tarjeta:
@@ -43,7 +43,7 @@ Botones de cada tarjeta:
 - **Precios**: su lista de precios vigente.
 - **Configurar** / **Ver cuenta**: carga el formulario de ese proveedor.
 
-> El pago se hace en el **sitio seguro del proveedor**. Matiz POS no recibe ni guarda datos de tarjeta.
+> El pago se hace en el **sitio seguro del proveedor**. Anna’s Beauty Supply POS no recibe ni guarda datos de tarjeta.
 
 Para configurarlo:
 

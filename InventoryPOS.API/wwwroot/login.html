@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Matiz POS</title>
+  <title>Anna’s Beauty Supply</title>
   <link rel="stylesheet" href="vendor/fonts.css">
   <link rel="stylesheet" href="vendor/icons/bootstrap-icons.min.css">
   <link rel="stylesheet" href="css/style.css">
@@ -18,8 +18,8 @@
     <section class="login-form">
       <form id="login-form" autocomplete="on">
         <div>
-          <div class="eyebrow">Matiz POS</div>
-          <h1 id="business-name">Inicia sesión</h1>
+          <div class="eyebrow">Inicia sesión</div>
+          <h1 id="business-name">Anna’s Beauty Supply</h1>
         </div>
         <label class="field"><span>Usuario</span><input id="userName" name="userName" autocomplete="username" required autofocus></label>
         <label class="field"><span>Contraseña</span><input id="password" name="password" type="password" autocomplete="current-password" required></label>
@@ -33,7 +33,7 @@
           <h1>Configura tu caja</h1>
           <p class="muted" style="margin:6px 0 0">Crea la cuenta de la dueña o encargado. Con ella darás de alta a los cajeros y sus permisos.</p>
         </div>
-        <label class="field"><span>Nombre de la tienda</span><input id="s-business" maxlength="150" placeholder="Bella Tinte" required></label>
+        <label class="field"><span>Nombre de la tienda</span><input id="s-business" maxlength="150" value="Anna’s Beauty Supply" required></label>
         <label class="field"><span>Tu nombre</span><input id="s-full" maxlength="150" required></label>
         <label class="field"><span>Usuario</span><input id="s-user" maxlength="50" pattern="[a-zA-Z0-9._\-]+" class="mono" required></label>
         <label class="field"><span>Contraseña (8+ caracteres, con número)</span><input id="s-pass" type="password" minlength="8" autocomplete="new-password" required></label>
@@ -57,6 +57,10 @@
 
       // A freshly installed register has no users yet: show the owner setup instead of the sign-in.
       api.get('/auth/setup').then(r => {
+        if (r.businessName) {
+          $('#business-name').textContent = document.title = r.businessName;
+          POS.business.remember(r.businessName);
+        }
         if (!r.needsSetup) return;
         $('#login-form').hidden = true;
         $('#setup-form').hidden = false;

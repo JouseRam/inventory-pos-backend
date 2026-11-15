@@ -39,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<Features.Promotions.PromotionService>();
         services.AddScoped<Features.Orders.PurchaseOrderService>();
         services.AddScoped<Features.Orders.SupplierStatsService>();
+        services.AddScoped<Features.Alerts.StockAlertService>();
         return services;
     }
 }

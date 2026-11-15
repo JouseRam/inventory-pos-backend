@@ -352,6 +352,7 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
     $('#pay-confirm').disabled = true;
     try {
       const sale = await api.post('/sales', body);
+      POS.refreshAlerts(); // a product may have just reached its minimum
       $('#done-folio').textContent = sale.folio;
       $('#done-change').textContent = fmt.money(sale.change);
       lastSaleId = sale.id;

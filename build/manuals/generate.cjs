@@ -47,7 +47,7 @@ async function seed() {
     token = (await call('POST', '/auth/login', { userName: USER, password: PASSWORD })).token;
     if ((await call('GET', '/products')).items?.length || (await call('GET', '/products')).length) return;
   } else {
-    token = (await call('POST', '/auth/setup', { userName: USER, fullName: 'Andrea Morales', password: PASSWORD, businessName: 'Matiz Belleza' })).token;
+    token = (await call('POST', '/auth/setup', { userName: USER, fullName: 'Andrea Morales', password: PASSWORD, businessName: 'Anna’s Beauty Supply' })).token;
   }
 
   await call('PUT', '/settings', {
@@ -153,6 +153,7 @@ const SHOTS = [
       });
       await p.reload(); await p.waitForTimeout(1200); await p.click('#orders [data-id]'); await p.waitForTimeout(800); } },
   { name: 'orders-stats', url: '/orders.html#stats', prepare: async p => { await p.click('#stats [data-sid]'); await p.waitForTimeout(900); } },
+  { name: 'bell', url: '/inventory.html', prepare: async p => { await p.click('#bell-btn'); await p.waitForTimeout(400); } },
   { name: 'purchases', url: '/purchases.html' },
   { name: 'catalogs', url: '/catalogs.html' },
   { name: 'customers', url: '/customers.html' },
@@ -251,10 +252,10 @@ function html(manuals, { title, subtitle }) {
     : `<img src="${href}" alt="${text}">`;
   const sections = manuals.map((m, i) => `
     <section class="manual ${i ? 'break' : ''}">
-      <header class="cover"><div class="eyebrow">Manual de usuario · Matiz POS</div><h1>${m.title}</h1><p>${m.summary}</p></header>
+      <header class="cover"><div class="eyebrow">Manual de usuario · Anna’s Beauty Supply POS</div><h1>${m.title}</h1><p>${m.summary}</p></header>
       ${keepHeadings(marked.parse(m.body, { renderer }))}
     </section>`).join('');
-  const toc = manuals.length > 1 ? `<section class="toc"><div class="eyebrow">Matiz POS</div><h1>${title}</h1><p class="lead">${subtitle}</p>
+  const toc = manuals.length > 1 ? `<section class="toc"><div class="eyebrow">Anna’s Beauty Supply POS</div><h1>${title}</h1><p class="lead">${subtitle}</p>
       <h2>Contenido</h2><ol>${manuals.map(m => `<li><b>${m.title}</b><span>${m.summary}</span></li>`).join('')}</ol></section>` : '';
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><style>${fonts}
     :root { --ink:#221a20; --ink-2:#4a3f47; --muted:#7a6f77; --line:#e6dfe3; --accent:#9c1f5c; --soft:#f6eef2; }
@@ -288,7 +289,7 @@ async function pdf(browser, manuals, file, meta) {
     path: file, format: 'Letter', printBackground: true, displayHeaderFooter: true,
     headerTemplate: '<span></span>',
     footerTemplate: `<div style="font-family:sans-serif;font-size:7pt;color:#7a6f77;width:100%;padding:0 16mm;display:flex;justify-content:space-between">
-      <span>Matiz POS · ${meta.footer}</span><span>Página <span class="pageNumber"></span> de <span class="totalPages"></span></span></div>`,
+      <span>Anna’s Beauty Supply POS · ${meta.footer}</span><span>Página <span class="pageNumber"></span> de <span class="totalPages"></span></span></div>`,
     margin: { top: '18mm', bottom: '20mm', left: '16mm', right: '16mm' },
   });
   await page.close();

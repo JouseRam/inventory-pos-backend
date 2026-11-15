@@ -81,7 +81,7 @@ public class ProductVariantRepository(ApplicationDbContext db) : Repository<Prod
     public async Task<IReadOnlyList<ProductVariant>> GetLowStockAsync(int? take = null, CancellationToken ct = default)
     {
         // Sorted in memory: SQLite cannot ORDER BY a decimal column, and the low-stock list is short.
-        var list = await WithProduct.AsNoTracking()
+        var list = await WithProduct.Include(v => v.Product).ThenInclude(p => p.Supplier).AsNoTracking()
             .Where(v => v.IsActive && v.Product.IsActive && v.Stock <= v.MinStock)
             .ToListAsync(ct);
         var sorted = list.OrderBy(v => v.Stock).ThenBy(v => v.Product.Name);

@@ -2,11 +2,11 @@
 title: Primeros pasos
 module: -
 icon: bi-flag
-summary: Qué es Matiz POS, cómo entrar, cómo se organiza el menú y qué hacer el primer día.
+summary: Qué es Anna’s Beauty Supply POS, cómo entrar, cómo se organiza el menú y qué hacer el primer día.
 ---
-## Qué es Matiz POS
+## Qué es Anna’s Beauty Supply POS
 
-Matiz POS es el sistema de punto de venta e inventario de la tienda. Se usa de dos formas:
+Anna’s Beauty Supply POS es el sistema de punto de venta e inventario de la tienda. Se usa de dos formas:
 
 | | Caja (programa de escritorio) | Web central |
 |---|---|---|
@@ -20,9 +20,11 @@ Si la tienda tiene una sola computadora y no usa la web, la caja hace todo.
 
 ![Pantalla de inicio de sesión](shot:login)
 
-1. Abre **Matiz POS** desde el escritorio (o la dirección de la web).
+1. Abre **Anna’s Beauty Supply POS** desde el escritorio (o la dirección de la web).
 2. Escribe tu **usuario** y tu **contraseña** y pulsa **Entrar**.
 3. Después de 5 intentos fallidos la cuenta se bloquea 10 minutos.
+
+La pantalla de entrada muestra el nombre de la tienda (**Anna’s Beauty Supply**). Para cambiarlo, ve a **Configuración › Negocio**.
 
 **La primera vez** que se abre una caja nueva aparece **Configura tu caja**: escribe el nombre de la tienda, tu nombre, un usuario y una contraseña (8 caracteres o más, con al menos un número). Esa persona queda como **administrador**.
 

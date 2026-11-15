@@ -25,3 +25,17 @@ Para corregir diferencias de un conteo físico, productos dañados o muestras pa
 El ajuste queda en el kardex con tu usuario y su motivo.
 
 > Para mercancía que llega del proveedor usa **Recepciones**, no un ajuste: así queda el costo y el proveedor.
+
+## Alertas de existencia mínima
+
+Cuando una presentación llega a su **mínimo** (el que defines en **Productos**) o se **agota**, el **administrador** recibe un aviso:
+
+![Alertas de existencias](shot:bell)
+
+- La **campana** de la barra superior muestra cuántas alertas nuevas hay. Ábrela para ver cada producto, cuántas piezas quedan, su mínimo y su proveedor.
+- En la **caja de escritorio** aparece además una **notificación de Windows** junto al reloj. Al hacer clic se abre **Pedidos**.
+- En la **web**, pulsa **Avisarme en el escritorio** dentro de la campana y acepta el permiso del navegador para recibir el aviso aunque estés en otra pestaña.
+- **Ver pedidos sugeridos** lleva a la lista para resurtir de cada proveedor.
+- **Marcar como vistas** apaga el contador. Si después el producto se **agota**, vuelve a avisar.
+
+La alerta se cierra sola cuando la existencia vuelve a quedar arriba del mínimo (por ejemplo al registrar una recepción). Solo los usuarios **administradores** reciben estas alertas.

@@ -13,17 +13,21 @@ namespace InventoryPOS.API.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController(IIdentityService identity, ICurrentUser currentUser) : ControllerBase
+public class AuthController(IIdentityService identity, ICurrentUser currentUser, SettingService settings) : ControllerBase
 {
     [HttpPost("login")]
     [AllowAnonymous]
     [EnableRateLimiting("login")]
     public Task<AuthResponseDto> Login(LoginDto dto, CancellationToken ct) => identity.LoginAsync(dto, ct);
 
-    /// <summary>Tells the sign-in screen whether this is a fresh install that needs its first admin.</summary>
+    /// <summary>Tells the sign-in screen whether this is a fresh install that needs its first admin, and the store's name to greet with.</summary>
     [HttpGet("setup")]
     [AllowAnonymous]
-    public async Task<IActionResult> SetupStatus(CancellationToken ct) => Ok(new { needsSetup = await identity.NeedsSetupAsync(ct) });
+    public async Task<IActionResult> SetupStatus(CancellationToken ct) => Ok(new
+    {
+        needsSetup = await identity.NeedsSetupAsync(ct),
+        businessName = (await settings.GetAsync(SettingKeys.BusinessName, ct))?.Trim() is { Length: > 0 } name ? name : null,
+    });
 
     [HttpPost("setup")]
     [AllowAnonymous]

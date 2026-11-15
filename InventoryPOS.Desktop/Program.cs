@@ -23,7 +23,7 @@ internal static class Program
         using var singleInstance = new Mutex(true, @"Local\MatizPOS.Register", out var isFirst);
         if (!isFirst)
         {
-            MessageBox.Show("Matiz POS ya está abierto en esta computadora.", "Matiz POS", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show("El punto de venta ya está abierto en esta computadora.", MainForm.StoreName, MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
 
@@ -70,7 +70,7 @@ internal static class Program
         catch (Exception ex)
         {
             logs.Write("Startup", LogLevel.Critical, "The register could not start", ex);
-            MessageBox.Show($"No se pudo iniciar Matiz POS:\n\n{ex.Message}\n\nDetalle en {paths.Logs}", "Matiz POS",
+            MessageBox.Show($"No se pudo iniciar el punto de venta:\n\n{ex.Message}\n\nDetalle en {paths.Logs}", MainForm.StoreName,
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
         }

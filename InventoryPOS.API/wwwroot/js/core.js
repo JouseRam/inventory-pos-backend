@@ -3,6 +3,10 @@
   const TOKEN_KEY = 'pos.token';
   const PROFILE_KEY = 'pos.profile';
   const THEME_KEY = 'pos.theme';
+  const BUSINESS_KEY = 'pos.business';
+  const ALERTS_SEEN_KEY = 'pos.alerts.notified';
+  /** The store this installation was set up for; Configuración › Negocio can rename it. */
+  const DEFAULT_BUSINESS = 'Anna’s Beauty Supply';
 
   const store = {
     get(key, area = localStorage) { try { return area.getItem(key); } catch { return null; } },
@@ -71,6 +75,16 @@
       return c
         ? `<span class="swatch ${size}" style="--c:${c}" title="${esc(shade.describe(code))}" aria-hidden="true"></span>`
         : `<span class="swatch none ${size}" aria-hidden="true"><i class="bi bi-droplet"></i></span>`;
+    },
+  };
+
+  // ── Business name, shown in the menu, the window title and the sign-in ──
+  const business = {
+    get name() { return store.get(BUSINESS_KEY) || DEFAULT_BUSINESS; },
+    remember(name) { if (name) store.set(BUSINESS_KEY, name); },
+    async refresh() {
+      try { const r = await api.get('/auth/setup'); business.remember(r.businessName); } catch { /* keep the last known */ }
+      return business.name;
     },
   };
 
@@ -327,7 +341,7 @@
     shell.className = 'shell';
     shell.innerHTML = `
       <aside class="rail" id="rail">
-        <a class="brand" href="${firstAllowedPage()}"><b>Matiz</b><span>POS</span></a>
+        <a class="brand" href="${firstAllowedPage()}"><b id="brand-name">${esc(business.name)}</b><span>POS</span></a>
         ${nav}
         <div class="rail-foot">
           <div class="who"><b>${esc(profile?.fullName || profile?.userName || '')}</b><span class="muted">${profile?.isSuperAdmin ? 'Administrador' : esc(profile?.userName || '')}</span></div>
@@ -343,6 +357,11 @@
           <h1>${esc(title)}</h1>
           <div class="spacer"></div>
           <div id="topbar-actions" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+          ${profile?.isSuperAdmin ? `<div class="bell">
+            <button class="btn ghost icon-btn" id="bell-btn" type="button" aria-label="Alertas de existencias" aria-expanded="false" title="Alertas de existencias">
+              <i class="bi bi-bell"></i><span class="bell-count" id="bell-count" hidden></span></button>
+            <div class="panel bell-panel" id="bell-panel" hidden></div>
+          </div>` : ''}
           <a class="cash-chip" id="sync-chip" href="settings.html#sync" hidden><span class="dot"></span><span id="sync-chip-text"></span></a>
           <a class="cash-chip" id="cash-chip" href="cash.html" hidden><span class="dot"></span><span id="cash-chip-text">Caja</span></a>
         </header>
@@ -356,6 +375,85 @@
     shell.querySelector('#logout-btn').onclick = () => session.logout();
     shell.querySelector('#menu-btn').onclick = () => shell.classList.toggle('nav-open');
     page.addEventListener('click', () => shell.classList.remove('nav-open'));
+  }
+
+  // ── Stock alerts for the administrator: bell in the top bar and a desktop notice when something reaches its minimum ──
+  let alertsState = null;
+
+  /** Windows notification: the desktop register shows it from the tray; a browser uses its own notifications if allowed. */
+  function notifyDesktop(title, body) {
+    if (window.chrome?.webview) { window.chrome.webview.postMessage({ type: 'notify', title, body }); return; }
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try { new Notification(title, { body, tag: 'stock-alerts' }).onclick = () => { window.focus(); location.href = 'orders.html'; }; } catch { /* not allowed here */ }
+    }
+  }
+
+  function renderAlerts() {
+    const panel = document.getElementById('bell-panel');
+    if (!panel || !alertsState) return;
+    const count = document.getElementById('bell-count');
+    count.hidden = !alertsState.unread;
+    count.textContent = alertsState.unread > 99 ? '99+' : alertsState.unread;
+    const list = alertsState.alerts;
+    const askPermission = !window.chrome?.webview && 'Notification' in window && Notification.permission === 'default';
+    panel.innerHTML = `
+      <header><h2>Existencias bajas</h2>${alertsState.unread ? '<button class="btn ghost sm" type="button" data-alerts-read>Marcar como vistas</button>' : ''}</header>
+      <div class="bell-list">${list.length ? list.map(a => `
+        <div class="bell-item ${a.read ? '' : 'unread'}">
+          <div><b>${esc(a.description)}</b><small class="muted">${esc([a.sku, a.supplierName].filter(Boolean).join(' · '))}</small></div>
+          ${a.outOfStock ? '<span class="pill crit">Agotado</span>' : `<span class="pill warn">Quedan ${fmt.qty(a.stock)} · mín. ${fmt.qty(a.minStock)}</span>`}
+        </div>`).join('') : '<p class="muted" style="margin:0;padding:14px 16px">Todo está arriba de su mínimo.</p>'}</div>
+      <footer>
+        ${session.can('Purchases') && list.length ? '<a class="btn primary sm" href="orders.html"><i class="bi bi-cart-check"></i>Ver pedidos sugeridos</a>' : ''}
+        ${askPermission ? '<button class="btn ghost sm" type="button" data-alerts-permission><i class="bi bi-bell"></i>Avisarme en el escritorio</button>' : ''}
+      </footer>`;
+  }
+
+  async function refreshAlerts() {
+    if (!document.getElementById('bell-panel')) return;
+    try { alertsState = await api.get('/alerts/stock'); } catch { return; }
+    renderAlerts();
+    // Notify once per alert (and again if it ran out after being seen), on any page of this computer.
+    let seen;
+    try { seen = JSON.parse(store.get(ALERTS_SEEN_KEY) || '[]'); } catch { seen = []; }
+    const keyOf = a => `${a.id}:${a.outOfStock ? 0 : 1}`;
+    const fresh = alertsState.alerts.filter(a => !a.read && !seen.includes(keyOf(a)));
+    store.set(ALERTS_SEEN_KEY, JSON.stringify(alertsState.alerts.map(keyOf)));
+    if (!fresh.length) return;
+    const out = fresh.filter(a => a.outOfStock).length;
+    const title = fresh.length === 1
+      ? (fresh[0].outOfStock ? `Se agotó: ${fresh[0].description}` : `En su mínimo: ${fresh[0].description}`)
+      : `${fresh.length} productos llegaron a su mínimo${out ? ` (${out} agotados)` : ''}`;
+    const body = fresh.length === 1
+      ? (fresh[0].outOfStock ? 'Ya no hay existencias. Revisa Pedidos para resurtir.' : `Quedan ${fmt.qty(fresh[0].stock)}; el mínimo es ${fmt.qty(fresh[0].minStock)}.`)
+      : fresh.slice(0, 4).map(a => a.description).join(', ') + (fresh.length > 4 ? '…' : '');
+    notifyDesktop(title, body);
+    toast(title, 'error');
+  }
+
+  function wireAlerts() {
+    const btn = document.getElementById('bell-btn');
+    if (!btn) return;
+    const panel = document.getElementById('bell-panel');
+    const close = () => { panel.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      panel.hidden = !panel.hidden;
+      btn.setAttribute('aria-expanded', String(!panel.hidden));
+    });
+    panel.addEventListener('click', async e => {
+      e.stopPropagation();
+      if (e.target.closest('[data-alerts-read]')) {
+        try { await api.post('/alerts/stock/read'); await refreshAlerts(); } catch (err) { fail(err); }
+      } else if (e.target.closest('[data-alerts-permission]')) {
+        await Notification.requestPermission();
+        renderAlerts();
+      }
+    });
+    document.addEventListener('click', close);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !panel.hidden) { close(); btn.focus(); } });
+    refreshAlerts();
+    setInterval(refreshAlerts, 60000);
   }
 
   /** Relative time in words for the sync chip ("hace 3 min"). */
@@ -413,12 +511,19 @@
     const current = NAV.flatMap(g => g.items).find(i => i.href === page);
     if ((module && !session.can(module)) || (current && !visible(current))) { location.href = firstAllowedPage(); return; }
     buildShell(title);
+    document.title = `${title} · ${business.name}`;
+    business.refresh().then(name => {
+      const brand = document.getElementById('brand-name');
+      if (brand) brand.textContent = name;
+      document.title = `${title} · ${name}`;
+    });
+    wireAlerts();
     refreshCashChip();
     renderSyncChip(env.status);
     if (env.role === 'Register' && env.paired) setInterval(refreshSyncChip, 30000);
     try { await run(); } catch (err) { fail(err); }
   }
 
-  window.POS = { api, session, env, canAdmin, fmt, esc, shade, toast, fail, $, $$, formData, fillForm, dialogForm, confirmBox, boot,
+  window.POS = { api, session, env, business, refreshAlerts, canAdmin, fmt, esc, shade, toast, fail, $, $$, formData, fillForm, dialogForm, confirmBox, boot,
     refreshCashChip, refreshSyncChip, loadProfile, firstAllowedPage, ago };
 })();

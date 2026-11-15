@@ -1416,6 +1416,50 @@ namespace InventoryPOS.Infrastructure.Persistence.Migrations
                     b.ToTable("Settings", (string)null);
                 });
 
+            modelBuilder.Entity("InventoryPOS.Domain.Entities.StockAlert", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("MinStock")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Stock")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<Guid>("Uid")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("VariantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Uid")
+                        .IsUnique();
+
+                    b.HasIndex("VariantId", "ResolvedAt");
+
+                    b.ToTable("StockAlerts", (string)null);
+                });
+
             modelBuilder.Entity("InventoryPOS.Domain.Entities.Supplier", b =>
                 {
                     b.Property<int>("Id")
@@ -2103,6 +2147,17 @@ namespace InventoryPOS.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Sale");
+                });
+
+            modelBuilder.Entity("InventoryPOS.Domain.Entities.StockAlert", b =>
+                {
+                    b.HasOne("InventoryPOS.Domain.Entities.ProductVariant", "Variant")
+                        .WithMany()
+                        .HasForeignKey("VariantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Variant");
                 });
 
             modelBuilder.Entity("InventoryPOS.Domain.Entities.UserModulePermission", b =>

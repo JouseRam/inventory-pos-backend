@@ -33,6 +33,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Promotion> Promotions => Set<Promotion>();
     public DbSet<PromotionRecipient> PromotionRecipients => Set<PromotionRecipient>();
     public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
+    public DbSet<StockAlert> StockAlerts => Set<StockAlert>();
     public DbSet<PurchaseOrderItem> PurchaseOrderItems => Set<PurchaseOrderItem>();
     public DbSet<PurchaseOrderEvent> PurchaseOrderEvents => Set<PurchaseOrderEvent>();
 

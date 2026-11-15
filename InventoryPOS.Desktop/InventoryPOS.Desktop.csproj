@@ -10,7 +10,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>MatizPOS</AssemblyName>
     <RootNamespace>InventoryPOS.Desktop</RootNamespace>
-    <Product>Matiz POS</Product>
+    <Product>Anna’s Beauty Supply POS</Product>
     <Version>1.0.0</Version>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>false</SelfContained>

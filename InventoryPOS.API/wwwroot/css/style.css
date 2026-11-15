@@ -403,3 +403,21 @@ dialog.labels-dialog { width: min(1040px, calc(100vw - 32px)); }
 .month-bars .mb { flex: 1 0 34px; display: grid; grid-template-rows: 1fr auto; height: 100%; text-align: center; }
 .month-bars .mb > span { align-self: end; display: block; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 2px; }
 .month-bars small { font-size: .7rem; color: var(--muted); padding-top: 4px; white-space: nowrap; }
+
+/* ── Stock alerts bell (administrator) ── */
+.bell { position: relative; }
+.bell-count { position: absolute; top: 2px; right: 2px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--crit); color: #fff; font: 700 .68rem/17px var(--font-body); text-align: center; }
+.bell-panel { position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; width: min(380px, calc(100vw - 24px)); box-shadow: var(--shadow); display: grid; }
+.bell-panel > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.bell-panel > header h2 { margin: 0; font-size: 1rem; }
+.bell-list { max-height: 340px; overflow-y: auto; }
+.bell-item { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+.bell-item > div { display: grid; min-width: 0; }
+.bell-item b { font-weight: 600; font-size: .9rem; }
+.bell-item small { font-size: .78rem; }
+.bell-item.unread { background: var(--accent-soft); }
+.bell-panel > footer { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 16px; }
+.bell-panel > footer:empty { display: none; }
+.bell-panel a.btn { text-decoration: none; }
+.brand { flex-wrap: wrap; row-gap: 0; }
+.brand b { line-height: 1.15; }
