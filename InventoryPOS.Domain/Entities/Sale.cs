@@ -9,7 +9,10 @@ public class Sale : BaseEntity
     public int? CustomerId { get; set; }
     public int CashSessionId { get; set; }
     public decimal Subtotal { get; set; }
+    /// <summary>Everything taken off the ticket: the cashier's discount plus the wholesale one.</summary>
     public decimal Discount { get; set; }
+    /// <summary>The wholesale customer's percentage applied to this sale (0 for retail), as it was when sold.</summary>
+    public decimal CustomerDiscountPercent { get; set; }
     /// <summary>Tax included in Total (prices are tax inclusive).</summary>
     public decimal Tax { get; set; }
     public decimal Total { get; set; }

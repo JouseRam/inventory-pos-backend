@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<InvoicingAccountService>();
         services.AddScoped<InvoiceService>();
         services.AddScoped<Features.Labels.LabelService>();
+        services.AddScoped<Features.Promotions.PromotionService>();
         return services;
     }
 }

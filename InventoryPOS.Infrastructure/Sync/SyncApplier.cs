@@ -1,3 +1,4 @@
+using InventoryPOS.Domain.Constants;
 using InventoryPOS.Application.Features.Sync;
 using InventoryPOS.Domain.Common;
 using InventoryPOS.Domain.Entities;
@@ -87,6 +88,11 @@ public class SyncApplier(ApplicationDbContext db, ILookupNormalizer normalizer)
             {
                 entity.TaxId = c.TaxId; entity.LegalName = c.LegalName; entity.TaxRegime = c.TaxRegime;
                 entity.TaxZipCode = c.TaxZipCode; entity.CfdiUse = c.CfdiUse;
+            }
+            if (c.CarriesPricing)
+            {
+                entity.Type = c.Type ?? CustomerTypes.Retail; entity.DiscountPercent = c.DiscountPercent;
+                entity.AcceptsPromotions = c.AcceptsPromotions; entity.PromotionsConsentAt = c.PromotionsConsentAt;
             }
         }
         await db.SaveChangesAsync(ct);
@@ -199,7 +205,7 @@ public class SyncApplier(ApplicationDbContext db, ILookupNormalizer normalizer)
                     Uid = s.Uid, Folio = s.Folio, CustomerId = await IdOfAsync<Customer>(s.CustomerUid, ct),
                     CashSessionId = await IdOfAsync<CashSession>(s.CashSessionUid, ct) ?? throw Missing("caja", s.CashSessionUid),
                     Subtotal = s.Subtotal, Discount = s.Discount, Tax = s.Tax, Total = s.Total, AmountPaid = s.AmountPaid, Change = s.Change,
-                    UserId = s.UserId, CreatedAt = s.CreatedAt,
+                    UserId = s.UserId, CreatedAt = s.CreatedAt, CustomerDiscountPercent = s.CustomerDiscountPercent,
                 };
                 foreach (var i in s.Items)
                     sale.Items.Add(new SaleItem

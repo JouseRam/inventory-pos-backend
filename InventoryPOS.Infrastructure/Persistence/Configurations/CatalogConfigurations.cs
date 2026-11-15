@@ -50,6 +50,8 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         e.Property(x => x.Email).HasMaxLength(150);
         e.Property(x => x.Address).HasMaxLength(300);
         e.Property(x => x.Notes).HasMaxLength(1000);
+        e.Property(x => x.Type).HasMaxLength(20).IsRequired().HasDefaultValue("Minorista");
+        e.Property(x => x.DiscountPercent).HasPrecision(5, 2);
         e.Property(x => x.TaxId).HasMaxLength(13);
         e.Property(x => x.LegalName).HasMaxLength(300);
         e.Property(x => x.TaxRegime).HasMaxLength(3);

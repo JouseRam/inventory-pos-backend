@@ -28,8 +28,16 @@ En el ticket puedes cambiar la cantidad o quitar un renglón. El sistema no deja
 
 ## Cliente y descuento
 
-- **Cliente:** elige una clienta frecuente para que la venta quede en su historial (y para facturarle más rápido). Si no eliges, la venta queda como **Mostrador**.
-- **Descuento:** un monto en pesos sobre el total del ticket.
+En el ticket elige el tipo de cliente:
+
+- **Minorista:** escoge una clienta de la lista para que la venta quede en su historial (y para facturarle más rápido). Si no eliges, la venta queda como **Mostrador**.
+- **Mayorista:** aparece **Buscar cliente mayorista**. Escribe el nombre o el teléfono y elige al cliente: se muestra su **porcentaje** y el ticket agrega la línea **Descuento mayorista (%)** sobre toda la compra. La **×** lo quita.
+
+![Venta a mayorista](shot:pos-wholesale)
+
+- **Descuento:** un monto en pesos adicional, que decide el cajero.
+
+El descuento de mayorista lo vuelve a calcular el sistema al registrar la venta, con el porcentaje guardado en **Clientes**.
 
 ## Cobrar
 
@@ -40,8 +48,10 @@ En el ticket puedes cambiar la cantidad o quitar un renglón. El sistema no deja
    - **Efectivo:** lo que entrega; el sistema calcula el **cambio**.
    - **Tarjeta:** el monto y el número de **autorización** del voucher.
    - **Transferencia:** el monto y la **referencia**.
-3. Opcional: **Notas** de la venta.
-4. Pulsa **Registrar venta**.
+3. Opcional, en **Cliente**: si no elegiste uno, captura su **Teléfono** (10 dígitos) y su **Nombre**. Si el teléfono ya está registrado, el sistema muestra quién es; si es nuevo, lo guarda en **Clientes** con la venta.
+4. Pregúntale si quiere recibir promociones por WhatsApp y, si acepta, marca **Acepta recibir promociones por WhatsApp**.
+5. Opcional: **Notas** de la venta.
+6. Pulsa **Registrar venta**.
 
 Tarjeta y transferencia no pueden pasar del total; el efectivo sí, y el excedente es el cambio.
 

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-14T23:27:04.719Z",
+  "generatedAt": "2026-11-15T01:53:06.039Z",
   "manuals": [
     {
       "slug": "primeros-pasos",
@@ -8,7 +8,7 @@
       "icon": "bi-flag",
       "summary": "Qué es Matiz POS, cómo entrar, cómo se organiza el menú y qué hacer el primer día.",
       "file": "00-primeros-pasos.pdf",
-      "size": 385879
+      "size": 387623
     },
     {
       "slug": "punto-de-venta",
@@ -17,7 +17,7 @@
       "icon": "bi-upc-scan",
       "summary": "Buscar tonos, armar el ticket, cobrar con efectivo, tarjeta o transferencia, imprimir y facturar.",
       "file": "01-punto-de-venta.pdf",
-      "size": 401529
+      "size": 574698
     },
     {
       "slug": "caja",
@@ -26,7 +26,7 @@
       "icon": "bi-cash-coin",
       "summary": "Abrir la caja con su fondo, registrar entradas y retiros de efectivo y hacer el corte al final del turno.",
       "file": "02-caja.pdf",
-      "size": 263188
+      "size": 263004
     },
     {
       "slug": "ventas",
@@ -35,7 +35,7 @@
       "icon": "bi-receipt-cutoff",
       "summary": "Consultar el historial de ventas, ver el detalle de un ticket, reimprimirlo, cancelarlo o facturarlo.",
       "file": "03-ventas.pdf",
-      "size": 339121
+      "size": 338538
     },
     {
       "slug": "facturacion",
@@ -44,7 +44,7 @@
       "icon": "bi-receipt",
       "summary": "Timbrar facturas CFDI 4.0 desde la caja, descargarlas, cancelarlas y configurar, pagar o cambiar el proveedor.",
       "file": "04-facturacion.pdf",
-      "size": 588725
+      "size": 561254
     },
     {
       "slug": "productos",
@@ -53,7 +53,7 @@
       "icon": "bi-palette",
       "summary": "Dar de alta productos con sus tonos y presentaciones, precios, costos, mínimos y control por lote y caducidad.",
       "file": "05-productos.pdf",
-      "size": 472455
+      "size": 471866
     },
     {
       "slug": "existencias",
@@ -62,7 +62,7 @@
       "icon": "bi-box-seam",
       "summary": "Ver lo que hay que resurtir, los lotes por caducar y el kardex de movimientos, y ajustar existencias.",
       "file": "06-existencias.pdf",
-      "size": 207914
+      "size": 207541
     },
     {
       "slug": "recepciones",
@@ -71,7 +71,7 @@
       "icon": "bi-truck",
       "summary": "Capturar la mercancía que llega del proveedor con su costo, lote y caducidad.",
       "file": "07-recepciones.pdf",
-      "size": 190241
+      "size": 189554
     },
     {
       "slug": "etiquetas-y-escaner",
@@ -80,7 +80,7 @@
       "icon": "bi-qr-code",
       "summary": "Imprimir etiquetas con QR o código de barras en hojas carta y cobrar escaneándolas.",
       "file": "08-etiquetas-y-escaner.pdf",
-      "size": 360039
+      "size": 360024
     },
     {
       "slug": "categorias-y-marcas",
@@ -96,9 +96,9 @@
       "title": "Clientes",
       "module": "Customers",
       "icon": "bi-person-heart",
-      "summary": "Guardar a las clientas frecuentes, su tono habitual y sus datos fiscales para facturar.",
+      "summary": "Guardar a las clientas frecuentes, mayoristas con su descuento, el permiso para promociones y los datos fiscales.",
       "file": "10-clientes.pdf",
-      "size": 350412
+      "size": 515730
     },
     {
       "slug": "proveedores",
@@ -107,7 +107,16 @@
       "icon": "bi-building",
       "summary": "Registrar a los proveedores para asignarlos a los productos y a las recepciones.",
       "file": "11-proveedores.pdf",
-      "size": 160701
+      "size": 160411
+    },
+    {
+      "slug": "promociones",
+      "title": "Promociones",
+      "module": "Promotions",
+      "icon": "bi-megaphone",
+      "summary": "Crear una promoción con imagen y slogan, elegir a qué clientes enviarla y mandarla por WhatsApp.",
+      "file": "12-promociones.pdf",
+      "size": 284420
     },
     {
       "slug": "resumen-del-dia",
@@ -115,8 +124,8 @@
       "module": "Dashboard",
       "icon": "bi-speedometer2",
       "summary": "Ver de un vistazo lo vendido hoy, en la semana y en el mes, lo que falta y lo que caduca.",
-      "file": "12-resumen-del-dia.pdf",
-      "size": 269237
+      "file": "13-resumen-del-dia.pdf",
+      "size": 270951
     },
     {
       "slug": "reportes",
@@ -124,8 +133,8 @@
       "module": "Reports",
       "icon": "bi-graph-up",
       "summary": "Analizar la venta, la utilidad, las formas de pago y lo más vendido por producto, marca y categoría.",
-      "file": "13-reportes.pdf",
-      "size": 235495
+      "file": "14-reportes.pdf",
+      "size": 236444
     },
     {
       "slug": "configuracion",
@@ -133,8 +142,8 @@
       "module": "Settings",
       "icon": "bi-sliders",
       "summary": "Datos del negocio, facturación, impresora, respaldos, usuarios y permisos, y la vinculación con la web.",
-      "file": "14-configuracion.pdf",
-      "size": 612570
+      "file": "15-configuracion.pdf",
+      "size": 610123
     },
     {
       "slug": "documentacion",
@@ -142,8 +151,8 @@
       "module": null,
       "icon": "bi-journal-text",
       "summary": "Dónde encontrar, leer y descargar estos manuales desde el sistema.",
-      "file": "15-documentacion.pdf",
-      "size": 286483
+      "file": "16-documentacion.pdf",
+      "size": 285784
     },
     {
       "slug": "completo",
@@ -152,7 +161,7 @@
       "icon": "bi-book",
       "summary": "Todos los manuales en un solo documento, con índice.",
       "file": "manual-completo.pdf",
-      "size": 3555138,
+      "size": 4031552,
       "complete": true
     }
   ]

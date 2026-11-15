@@ -30,6 +30,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<CashMovement> CashMovements => Set<CashMovement>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoicingAccount> InvoicingAccounts => Set<InvoicingAccount>();
+    public DbSet<Promotion> Promotions => Set<Promotion>();
+    public DbSet<PromotionRecipient> PromotionRecipients => Set<PromotionRecipient>();
 
     // ── System ──
     public DbSet<Setting> Settings => Set<Setting>();

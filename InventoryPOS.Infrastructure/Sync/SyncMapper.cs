@@ -38,7 +38,8 @@ public class SyncMapper(ApplicationDbContext db)
         var query = db.Customers.AsNoTracking().Where(Changed<Customer>(since));
         if (uids != null) query = query.Where(c => uids.Contains(c.Uid));
         return await query.Select(c => new CustomerSync(c.Uid, c.Name, c.Phone, c.Email, c.Address, c.Notes, c.IsActive, c.CreatedAt, c.UpdatedAt,
-                true, c.TaxId, c.LegalName, c.TaxRegime, c.TaxZipCode, c.CfdiUse))
+                true, c.TaxId, c.LegalName, c.TaxRegime, c.TaxZipCode, c.CfdiUse,
+                true, c.Type, c.DiscountPercent, c.AcceptsPromotions, c.PromotionsConsentAt))
             .ToListAsync(ct);
     }
 
@@ -96,7 +97,7 @@ public class SyncMapper(ApplicationDbContext db)
         return sales.Select(s => new SaleSync(s.Uid, s.Folio, s.Customer?.Uid, s.CashSession.Uid, s.Subtotal, s.Discount, s.Tax, s.Total,
             s.AmountPaid, s.Change, s.Status, s.Notes, s.CancelReason, s.CancelledAt, s.UserId, s.CreatedAt,
             s.Items.Select(i => new SaleItemSync(i.Uid, i.Variant.Uid, i.Description, i.Quantity, i.UnitPrice, i.UnitCost, i.Discount, i.Subtotal)).ToList(),
-            s.Payments.Select(p => new SalePaymentSync(p.Uid, p.Method, p.Amount, p.Reference)).ToList())).ToList();
+            s.Payments.Select(p => new SalePaymentSync(p.Uid, p.Method, p.Amount, p.Reference)).ToList(), s.CustomerDiscountPercent)).ToList();
     }
 
     public async Task<List<StockSync>> StocksAsync(IReadOnlyCollection<Guid> variantUids, CancellationToken ct) =>

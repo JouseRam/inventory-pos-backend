@@ -2,20 +2,30 @@
 title: Clientes
 module: Customers
 icon: bi-person-heart
-summary: Guardar a las clientas frecuentes, su tono habitual y sus datos fiscales para facturar.
+summary: Guardar a las clientas frecuentes, mayoristas con su descuento, el permiso para promociones y los datos fiscales.
 ---
 ![Clientes](shot:customers)
 
 ## Lista
 
-Busca por **nombre, teléfono, correo, RFC o razón social**. La lista muestra nombre, teléfono, RFC, correo, tono habitual y notas, y la fecha de alta.
+Busca por **nombre, teléfono** (con o sin espacios), **correo, RFC o razón social**. La lista muestra nombre, teléfono, **tipo** (minorista, o mayorista con su porcentaje), si **acepta promociones**, RFC, correo, notas y fecha de alta.
+
+Los clientes también se registran solos al cobrar, si se captura su teléfono. Ver el manual **Punto de venta**.
 
 ## Agregar o editar
 
 Pulsa **Agregar cliente** (o **Editar** en un renglón) y captura:
 
-- **Nombre**, **Teléfono**, **Correo** y **Dirección**.
+- **Nombre**, **Teléfono** (10 dígitos), **Correo** y **Dirección**.
+- **Tipo de cliente:** **Minorista** o **Mayorista**. Al elegir Mayorista aparece **Descuento de mayorista (%)**: el porcentaje que se le descuenta en cada compra.
+- **Acepta recibir promociones por WhatsApp:** márcalo solo si el cliente te dio permiso. Si después pide no recibir más (por ejemplo, responde *BAJA*), desmárcalo.
 - **Tono habitual, alergias, notas:** por ejemplo *6.1 con oxidante 20 vol; sensible al amoniaco*.
+
+![Cliente mayorista](shot:customer-wholesale)
+
+## Mayoristas
+
+El descuento de un mayorista se aplica en el **Punto de venta** al elegirlo, sobre toda su compra, y queda guardado en la venta. Si cambias su porcentaje, se usa el nuevo en las siguientes ventas; las anteriores no cambian.
 
 ## Datos fiscales
 

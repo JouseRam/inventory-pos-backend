@@ -34,7 +34,7 @@ El menú de la izquierda muestra solo los módulos a los que tienes permiso. Est
 
 - **Venta:** Punto de venta, Caja y Ventas.
 - **Inventario:** Productos, Existencias, Recepciones, Categorías y marcas.
-- **Personas:** Clientes y Proveedores.
+- **Personas:** Clientes, Proveedores y Promociones.
 - **Análisis:** Resumen del día y Reportes.
 - **Sistema:** Configuración y Documentación.
 

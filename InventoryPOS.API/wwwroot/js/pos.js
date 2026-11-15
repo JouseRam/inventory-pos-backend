@@ -1,6 +1,6 @@
 /* Point of sale: search or scan variants, build the ticket, collect mixed payments. */
 POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
-  const { api, session, fmt, esc, shade, toast, fail, $ } = POS;
+  const { api, session, fmt, esc, shade, toast, fail, $, $$ } = POS;
   const CART_KEY = 'pos.cart';
 
   let cart = loadCart();          // [{ variant, qty }]
@@ -120,10 +120,60 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
     renderTicket();
   }
 
+  // ── Customer: retail (optional, picked from the list or captured by phone at checkout) or wholesale (searched) ──
+  let customers = [];
+  let customer = null; // { id, name, type, discountPercent, phone, acceptsPromotions }
+  let customerType = 'Minorista';
+  const round2 = n => Math.round(n * 100) / 100;
+  const phoneText = p => p && p.length === 10 ? `${p.slice(0, 3)} ${p.slice(3, 6)} ${p.slice(6)}` : (p || '');
+  const digits = s => (s || '').replace(/\D/g, '').replace(/^521?(?=\d{10}$)/, '');
+
+  function setCustomerType(type) {
+    customerType = type;
+    $$('[data-ctype]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.ctype === type)));
+    $('#retail-wrap').hidden = type !== 'Minorista';
+    $('#wholesale-wrap').hidden = type !== 'Mayorista' || !!customer;
+    if ((customer?.type === 'Mayorista') !== (type === 'Mayorista')) chooseCustomer(null);
+    if (type === 'Mayorista' && !customer) { $('#ws-search').value = ''; renderWholesale(); $('#ws-search').focus(); }
+  }
+  function chooseCustomer(c) {
+    customer = c;
+    $('#customer').value = c && c.type !== 'Mayorista' ? String(c.id) : '';
+    $('#ws-chosen').hidden = !c || c.type !== 'Mayorista';
+    $('#wholesale-wrap').hidden = customerType !== 'Mayorista' || !!c;
+    if (c?.type === 'Mayorista') {
+      $('#ws-chosen').innerHTML = `<i class="bi bi-shop"></i><span><b>${esc(c.name)}</b><small class="muted">${esc(phoneText(c.phone))}</small></span>
+        <span class="pill accent">${fmt.qty(c.discountPercent)} % desc.</span>
+        <button class="btn ghost sm icon-btn" type="button" id="ws-clear" aria-label="Quitar cliente"><i class="bi bi-x-lg"></i></button>`;
+    }
+    renderTicket();
+  }
+  function renderWholesale() {
+    const q = $('#ws-search').value.trim().toLowerCase();
+    const qd = digits(q);
+    const list = customers.filter(c => c.type === 'Mayorista' && c.isActive &&
+      (!q || c.name.toLowerCase().includes(q) || (qd.length >= 3 && (c.phone || '').includes(qd)))).slice(0, 8);
+    $('#ws-results').innerHTML = list.length ? list.map(c => `
+      <button type="button" class="ws-option" data-ws="${c.id}"><span><b>${esc(c.name)}</b><small class="muted">${esc(phoneText(c.phone))}</small></span>
+        <span class="pill accent">${fmt.qty(c.discountPercent)} %</span></button>`).join('')
+      : `<p class="muted" style="margin:4px 0;font-size:.85rem">${customers.some(c => c.type === 'Mayorista') ? 'Ningún mayorista coincide.' : 'Aún no hay clientes mayoristas. Regístralos en Clientes con su porcentaje.'}</p>`;
+  }
+  $$('[data-ctype]').forEach(b => b.addEventListener('click', () => setCustomerType(b.dataset.ctype)));
+  $('#ws-search').addEventListener('input', renderWholesale);
+  $('#ws-results').addEventListener('click', e => {
+    const b = e.target.closest('[data-ws]');
+    if (b) chooseCustomer(customers.find(c => c.id === Number(b.dataset.ws)));
+  });
+  $('#ws-chosen').addEventListener('click', e => { if (e.target.closest('#ws-clear')) { chooseCustomer(null); setCustomerType('Mayorista'); } });
+  $('#customer').addEventListener('change', () => chooseCustomer(customers.find(c => c.id === Number($('#customer').value)) || null));
+
+  /** The wholesale percentage is applied by the server too; here it is only shown so the cashier sees the real total. */
   function totals() {
     const subtotal = cart.reduce((s, l) => s + Math.round(l.qty * l.variant.price * 100) / 100, 0);
-    const discount = Math.min(Math.max(Number($('#discount').value) || 0, 0), subtotal);
-    return { subtotal, discount, total: Math.round((subtotal - discount) * 100) / 100 };
+    const wholesalePct = customer?.type === 'Mayorista' ? customer.discountPercent : 0;
+    const wholesale = round2(subtotal * wholesalePct / 100);
+    const discount = Math.min(Math.max(Number($('#discount').value) || 0, 0), subtotal - wholesale);
+    return { subtotal, discount, wholesale, wholesalePct, total: round2(subtotal - discount - wholesale) };
   }
 
   function renderTicket() {
@@ -145,6 +195,9 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
       </div>`).join('') : '<div class="empty">Escanea un producto o elige un tono para empezar.</div>';
 
     const t = totals();
+    $('#t-ws-row').hidden = !t.wholesale;
+    $('#t-ws-label').textContent = `Descuento mayorista (${fmt.qty(t.wholesalePct)} %)`;
+    $('#t-ws').textContent = '− ' + fmt.money(t.wholesale);
     $('#t-sub').textContent = fmt.money(t.subtotal);
     $('#t-total').textContent = fmt.money(t.total);
     $('#t-tax').textContent = `IVA incluido · ${cart.reduce((n, l) => n + l.qty, 0)} pzas`;
@@ -179,7 +232,7 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
     renderTicket();
   });
   $('#discount').addEventListener('input', renderTicket);
-  $('#clear-btn').addEventListener('click', () => { cart = []; $('#discount').value = 0; renderTicket(); });
+  $('#clear-btn').addEventListener('click', () => { cart = []; $('#discount').value = 0; chooseCustomer(null); setCustomerType('Minorista'); renderTicket(); });
 
   // ── Cash session gate ──
   async function refreshCash() {
@@ -226,11 +279,37 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
   ['#pay-cash', '#pay-card', '#pay-transfer'].forEach(id => $(id).addEventListener('input', renderPay));
   ['#pay-card', '#pay-transfer'].forEach(id => $(id).addEventListener('input', renderQuick));
 
+  /**
+   * Customer block of the payment dialog. Without a chosen customer the cashier may capture a phone: a known number
+   * shows who it is, a new one is registered with the sale. Consent to promotions is asked out loud and ticked here.
+   */
+  function renderPayCustomer() {
+    const note = $('#pay-customer-note');
+    $('#pay-phone-fields').hidden = !!customer;
+    if (customer) {
+      note.innerHTML = `Venta para <b>${esc(customer.name)}</b>${customer.phone ? ' · ' + esc(phoneText(customer.phone)) : ''}.`;
+      $('#pay-consent-wrap').hidden = !customer.phone || customer.acceptsPromotions;
+      return;
+    }
+    const d = digits($('#pay-phone').value);
+    const known = d.length === 10 ? customers.find(c => c.phone === d) : null;
+    note.innerHTML = !$('#pay-phone').value.trim() ? 'Captura su teléfono para guardarlo en Clientes y enviarle promociones.'
+      : d.length !== 10 ? 'El teléfono debe tener 10 dígitos.'
+      : known ? `Cliente registrado: <b>${esc(known.name)}</b>.` : 'Cliente nuevo: se guardará en Clientes.';
+    $('#pay-name').disabled = !!known;
+    if (known) $('#pay-name').value = known.name;
+    $('#pay-consent-wrap').hidden = d.length !== 10 || !!known?.acceptsPromotions;
+  }
+  $('#pay-phone').addEventListener('input', renderPayCustomer);
+
   function openPay() {
     if ($('#pay-btn').disabled) return;
     const { total } = totals();
     $('#pay-total').textContent = fmt.money(total);
-    ['#pay-cash', '#pay-card', '#pay-transfer', '#pay-card-ref', '#pay-transfer-ref', '#pay-notes'].forEach(id => { $(id).value = ''; });
+    ['#pay-cash', '#pay-card', '#pay-transfer', '#pay-card-ref', '#pay-transfer-ref', '#pay-notes', '#pay-phone', '#pay-name'].forEach(id => { $(id).value = ''; });
+    $('#pay-consent').checked = false;
+    $('#pay-name').disabled = false;
+    renderPayCustomer();
     $('#pay-body').hidden = false; $('#pay-done').hidden = true;
     $('#pay-confirm').hidden = false; $('#pay-cancel').hidden = false; $('#pay-new').hidden = true; $('#pay-print').hidden = true;
     $('#pay-invoice').hidden = true;
@@ -261,8 +340,11 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
       { method: 'Transferencia', amount: num('#pay-transfer'), reference: $('#pay-transfer-ref').value.trim() || null },
     ].filter(p => p.amount > 0);
     const body = {
-      customerId: $('#customer').value ? Number($('#customer').value) : null,
+      customerId: customer?.id ?? null,
       discount: totals().discount,
+      customerPhone: customer ? null : ($('#pay-phone').value.trim() || null),
+      customerName: customer ? null : ($('#pay-name').value.trim() || null),
+      acceptsPromotions: $('#pay-consent').checked,
       notes: $('#pay-notes').value.trim() || null,
       items: cart.map(l => ({ variantId: l.variant.id, quantity: l.qty, unitPrice: null, discount: 0, batchId: l.batchId ?? null })),
       payments,
@@ -281,7 +363,8 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
       $('#pay-body').hidden = true; $('#pay-done').hidden = false;
       $('#pay-confirm').hidden = true; $('#pay-cancel').hidden = true; $('#pay-new').hidden = false;
       $('#pay-new').focus();
-      cart = []; $('#discount').value = 0; $('#customer').value = '';
+      cart = []; $('#discount').value = 0; chooseCustomer(null); setCustomerType('Minorista');
+      loadCustomers();
       renderTicket();
       search();
       refreshCash();
@@ -316,16 +399,23 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
   });
 
   // ── Initial data ──
-  const [settings, customers, printerStatus] = await Promise.all([
+  // Customers registered at checkout appear in the list for the next sale.
+  async function loadCustomers() {
+    customers = await api.get('/customers').catch(() => []);
+    const selected = $('#customer').value;
+    $('#customer').innerHTML = '<option value="">Mostrador</option>' + customers.filter(c => c.type !== 'Mayorista').map(c =>
+      `<option value="${c.id}">${esc(c.name)}${c.phone ? ' · ' + esc(phoneText(c.phone)) : ''}</option>`).join('');
+    $('#customer').value = selected;
+  }
+  const [settings, printerStatus] = await Promise.all([
     api.get('/settings').catch(() => []),
-    api.get('/customers').catch(() => []),
     api.get('/printing/status').catch(() => null),
+    loadCustomers(),
   ]);
   if (printerStatus) printer = printerStatus;
   const name = settings.find(s => s.key === 'BusinessName')?.value;
   if (name) $('#store-name').textContent = name;
-  $('#customer').insertAdjacentHTML('beforeend', customers.map(c =>
-    `<option value="${c.id}">${esc(c.name)}${c.phone ? ' · ' + esc(c.phone) : ''}</option>`).join(''));
+
   await refreshCash();
   $('#search').focus();
 });

@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Promociones · Matiz</title>
+  <link rel="stylesheet" href="vendor/fonts.css">
+  <link rel="stylesheet" href="vendor/icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="page" id="page">
+    <div class="promo-layout">
+      <section class="panel promo-list">
+        <header><h2>Promociones</h2><button class="btn primary sm" type="button" id="new-promo"><i class="bi bi-plus-lg"></i>Nueva</button></header>
+        <div id="promos"></div>
+      </section>
+
+      <section class="promo-detail" id="detail">
+        <div class="panel empty" id="detail-empty">Elige una promoción o crea una nueva.</div>
+
+        <form class="panel" id="promo-form" hidden>
+          <header><h2 id="promo-title">Nueva promoción</h2>
+            <button class="btn ghost sm danger" type="button" id="promo-delete" hidden><i class="bi bi-trash3"></i>Eliminar</button></header>
+          <div class="body promo-editor">
+            <div class="promo-fields">
+              <label class="field"><span>Slogan o título</span><input name="title" maxlength="150" required placeholder="Ej. 2x1 en tintes este fin de semana"></label>
+              <label class="field"><span>Mensaje</span><textarea name="message" rows="5" maxlength="1500" required
+                placeholder="Detalles de la promoción: qué incluye, hasta cuándo, condiciones…"></textarea></label>
+              <div class="field"><span>Imagen (JPG o PNG)</span>
+                <div class="promo-image-actions">
+                  <label class="btn sm"><i class="bi bi-image"></i>Elegir imagen<input type="file" accept="image/jpeg,image/png" id="promo-file" hidden></label>
+                  <button class="btn ghost sm" type="button" id="promo-remove-image" hidden>Quitar imagen</button>
+                </div></div>
+              <div class="form-error" hidden id="promo-error"></div>
+              <div><button class="btn primary" type="submit"><i class="bi bi-check-lg"></i>Guardar promoción</button></div>
+            </div>
+            <div class="wa-preview" aria-label="Así se verá en WhatsApp">
+              <div class="wa-bubble">
+                <img id="preview-img" alt="" hidden>
+                <div class="wa-text" id="preview-text"></div>
+              </div>
+              <p class="muted" style="margin:6px 0 0;font-size:.8rem;text-align:center">Vista previa en WhatsApp</p>
+            </div>
+          </div>
+        </form>
+
+        <section class="panel" id="recipients-panel" hidden>
+          <header><h2>Destinatarios</h2><span class="muted" id="recipients-count"></span>
+            <button class="btn sm" type="button" id="add-recipients"><i class="bi bi-people"></i>Agregar clientes</button></header>
+          <div class="body">
+            <div class="notice" style="margin-bottom:12px"><i class="bi bi-whatsapp"></i><div>
+              Pulsa <b>Enviar</b>: se copia la imagen y se abre el chat de WhatsApp del cliente con el texto listo.
+              En WhatsApp pega la imagen (<kbd>Ctrl</kbd>+<kbd>V</kbd>), envía y regresa aquí para marcarlo como enviado.</div></div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Cliente</th><th>Teléfono</th><th>Estado</th><th></th></tr></thead>
+              <tbody id="recipients"></tbody></table></div>
+          </div>
+        </section>
+      </section>
+    </div>
+
+    <dialog id="audience-dialog" aria-labelledby="audience-title" style="width:min(720px,calc(100vw - 32px))">
+      <form method="dialog">
+        <header><h2 id="audience-title">Agregar clientes</h2><button class="btn ghost icon-btn" value="cancel" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button></header>
+        <div class="body" style="display:grid;gap:12px">
+          <div class="toolbar">
+            <label class="field"><span>Tipo</span><select id="aud-type"><option value="">Todos</option><option>Minorista</option><option>Mayorista</option></select></label>
+            <label class="field grow"><span>Buscar</span><input type="search" id="aud-q" placeholder="Nombre o teléfono"></label>
+          </div>
+          <label class="check"><input type="checkbox" id="aud-all"> Seleccionar todos los de la lista</label>
+          <div class="aud-list" id="aud-list"></div>
+          <p class="muted" style="margin:0;font-size:.85rem" id="aud-note"></p>
+        </div>
+        <footer><button class="btn ghost" value="cancel">Cancelar</button><button class="btn primary" type="button" id="aud-add">Agregar</button></footer>
+      </form>
+    </dialog>
+  </main>
+  <script src="js/core.js"></script>
+  <script>
+    POS.boot({ module: 'Promotions', title: 'Promociones' }, async () => {
+      const { api, esc, fmt, toast, fail, confirmBox, session, $, $$ } = POS;
+      const canEdit = session.can('Promotions', true);
+      const phoneText = p => p && p.length === 10 ? `${p.slice(0, 3)} ${p.slice(3, 6)} ${p.slice(6)}` : (p || '');
+      let list = [], current = null, imageData = null, removeImage = false, imagePng = null;
+
+      // ── WhatsApp formatting for the preview (*bold*, _italic_) ──
+      const waFormat = text => esc(text).replace(/\*([^*\n]+)\*/g, '<b>$1</b>').replace(/_([^_\n]+)_/g, '<i>$1</i>').replace(/\n/g, '<br>');
+      const business = (await api.get('/settings').catch(() => [])).find(s => s.key === 'BusinessName')?.value || '';
+      const composed = () => {
+        const f = $('#promo-form').elements;
+        return `*${f.title.value.trim() || 'Tu slogan'}*\n\n${f.message.value.trim() || 'El mensaje de la promoción.'}`
+          + (business ? `\n\n— ${business}` : '') + '\n\n_Si ya no quieres recibir promociones, responde BAJA._';
+      };
+      const renderPreview = () => { $('#preview-text').innerHTML = waFormat(composed()); };
+
+      // ── List ──
+      async function loadList() {
+        list = await api.get('/promotions');
+        $('#promos').innerHTML = list.length ? list.map(p => `
+          <button type="button" class="promo-item ${current?.id === p.id ? 'active' : ''}" data-id="${p.id}">
+            ${p.hasImage ? `<img src="" data-thumb="${p.id}" alt="">` : '<span class="promo-noimg"><i class="bi bi-megaphone"></i></span>'}
+            <span><b>${esc(p.title)}</b><small class="muted">${fmt.date(p.createdAt)} · ${p.sent}/${p.recipients} enviados</small></span>
+          </button>`).join('') : '<p class="muted" style="padding:12px 16px;margin:0">Aún no hay promociones.</p>';
+        // Thumbnails need the session token, so they are fetched rather than linked.
+        $$('[data-thumb]').forEach(async img => { img.src = await imageUrl(Number(img.dataset.thumb)).catch(() => ''); });
+      }
+      const imageUrls = new Map();
+      async function imageUrl(id) {
+        if (imageUrls.has(id)) return imageUrls.get(id);
+        const res = await fetch(`/api/promotions/${id}/image`, { headers: { Authorization: 'Bearer ' + session.token } });
+        if (!res.ok) throw new Error('Sin imagen');
+        const url = URL.createObjectURL(await res.blob());
+        imageUrls.set(id, url);
+        return url;
+      }
+
+      // ── Editor ──
+      function openEditor(p) {
+        current = p;
+        imageData = null; removeImage = false; imagePng = null;
+        const f = $('#promo-form');
+        f.hidden = false; $('#detail-empty').hidden = true;
+        f.elements.title.value = p?.title || '';
+        f.elements.message.value = p?.message || '';
+        $('#promo-title').textContent = p ? 'Promoción' : 'Nueva promoción';
+        $('#promo-delete').hidden = !p || !canEdit;
+        $('#promo-error').hidden = true;
+        $('#recipients-panel').hidden = !p;
+        $$('#promo-form input, #promo-form textarea, #promo-form button').forEach(el => { el.disabled = !canEdit; });
+        $('#add-recipients').hidden = !canEdit;
+        setPreviewImage(null);
+        if (p?.hasImage) imageUrl(p.id).then(url => { setPreviewImage(url); prepareClipboardImage(url); }).catch(() => {});
+        renderPreview();
+        if (p) renderRecipients();
+        $$('.promo-item').forEach(b => b.classList.toggle('active', Number(b.dataset.id) === p?.id));
+      }
+      function setPreviewImage(url) {
+        $('#preview-img').hidden = !url;
+        if (url) $('#preview-img').src = url;
+        $('#promo-remove-image').hidden = !url || !canEdit;
+      }
+
+      // Pictures are shrunk to 1080 px (what WhatsApp sends anyway) before they are saved.
+      function shrink(file) {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+            const scale = Math.min(1, 1080 / Math.max(img.width, img.height));
+            const canvas = Object.assign(document.createElement('canvas'), { width: Math.round(img.width * scale), height: Math.round(img.height * scale) });
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', 0.85));
+            URL.revokeObjectURL(img.src);
+          };
+          img.onerror = () => reject(new Error('No se pudo leer la imagen.'));
+          img.src = URL.createObjectURL(file);
+        });
+      }
+      $('#promo-file').addEventListener('change', async e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+          const dataUrl = await shrink(file);
+          imageData = dataUrl.split(',')[1]; removeImage = false;
+          setPreviewImage(dataUrl);
+        } catch (err) { fail(err); }
+        e.target.value = '';
+      });
+      $('#promo-remove-image').addEventListener('click', () => { imageData = null; removeImage = true; setPreviewImage(null); });
+      $('#promo-form').addEventListener('input', renderPreview);
+
+      $('#promo-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const f = e.target.elements;
+        const body = { title: f.title.value, message: f.message.value, image: imageData, imageType: imageData ? 'image/jpeg' : null, removeImage };
+        try {
+          const saved = current ? await api.put(`/promotions/${current.id}`, body) : await api.post('/promotions', body);
+          imageUrls.delete(saved.id);
+          toast('Promoción guardada.');
+          await loadList();
+          openEditor(saved);
+        } catch (err) { $('#promo-error').textContent = err.message; $('#promo-error').hidden = false; }
+      });
+      $('#promo-delete').addEventListener('click', async () => {
+        if (!await confirmBox(`Eliminar la promoción «${current.title}» y su lista de destinatarios.`, { okText: 'Eliminar', danger: true })) return;
+        try { await api.del(`/promotions/${current.id}`); toast('Promoción eliminada.'); current = null; $('#promo-form').hidden = true; $('#recipients-panel').hidden = true; $('#detail-empty').hidden = false; await loadList(); }
+        catch (err) { fail(err); }
+      });
+
+      // ── Recipients and sending ──
+      const statusPill = s => s === 'Enviado' ? '<span class="pill good">Enviado</span>' : s === 'Omitido' ? '<span class="pill">Omitido</span>' : '<span class="pill warn">Pendiente</span>';
+      function renderRecipients() {
+        const r = current.recipients;
+        const sent = r.filter(x => x.status === 'Enviado').length;
+        $('#recipients-count').textContent = r.length ? `${sent} de ${r.length} enviados` : '';
+        $('#recipients').innerHTML = r.length ? r.map(x => `
+          <tr data-r="${x.id}">
+            <td>${esc(x.name)}</td><td class="mono">${esc(phoneText(x.phone))}</td><td>${statusPill(x.status)}${x.sentAt ? ` <small class="muted">${fmt.dateTime(x.sentAt)}</small>` : ''}</td>
+            <td class="num">${canEdit ? (x.status === 'Pendiente'
+              ? `<button class="btn primary sm" type="button" data-send="${x.id}"><i class="bi bi-whatsapp"></i>Enviar</button>
+                 <button class="btn ghost sm" type="button" data-mark="${x.id}" data-status="Enviado">Marcar enviado</button>
+                 <button class="btn ghost sm" type="button" data-mark="${x.id}" data-status="Omitido">Omitir</button>`
+              : `<button class="btn ghost sm" type="button" data-mark="${x.id}" data-status="Pendiente">Volver a pendiente</button>`)
+              + ` <button class="btn ghost sm danger icon-btn" type="button" data-remove="${x.id}" aria-label="Quitar de la lista"><i class="bi bi-x-lg"></i></button>` : ''}</td>
+          </tr>`).join('') : '<tr><td colspan="4" class="empty">Agrega a los clientes que recibirán esta promoción.</td></tr>';
+      }
+
+      // The image goes on the clipboard as PNG (what browsers can copy); it is prepared ahead so the click can copy at once.
+      async function prepareClipboardImage(url) {
+        try {
+          const img = await new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ko; i.src = url; });
+          const canvas = Object.assign(document.createElement('canvas'), { width: img.naturalWidth, height: img.naturalHeight });
+          canvas.getContext('2d').drawImage(img, 0, 0);
+          imagePng = await new Promise(ok => canvas.toBlob(ok, 'image/png'));
+        } catch { imagePng = null; }
+      }
+
+      async function send(recipient) {
+        let copied = false;
+        if (imagePng && navigator.clipboard && window.ClipboardItem) {
+          try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': imagePng })]); copied = true; } catch { copied = false; }
+        }
+        const url = `https://wa.me/52${recipient.phone}?text=${encodeURIComponent(current.whatsAppText)}`;
+        window.open(url, '_blank', 'noopener');
+        toast(imagePng ? (copied ? 'Imagen copiada: pégala en el chat con Ctrl+V y envía.' : 'No se pudo copiar la imagen; adjúntala a mano.') : 'Chat abierto con el mensaje listo.');
+      }
+
+      $('#recipients').addEventListener('click', async e => {
+        const sendBtn = e.target.closest('[data-send]');
+        const mark = e.target.closest('[data-mark]');
+        const remove = e.target.closest('[data-remove]');
+        const find = id => current.recipients.find(r => r.id === Number(id));
+        try {
+          if (sendBtn) { await send(find(sendBtn.dataset.send)); return; }
+          if (mark) {
+            const updated = await api.put(`/promotions/${current.id}/recipients/${mark.dataset.mark}`, { status: mark.dataset.status });
+            Object.assign(find(mark.dataset.mark), updated);
+          }
+          if (remove) {
+            await api.del(`/promotions/${current.id}/recipients/${remove.dataset.remove}`);
+            current.recipients = current.recipients.filter(r => r.id !== Number(remove.dataset.remove));
+          }
+          renderRecipients();
+          loadList();
+        } catch (err) { fail(err); }
+      });
+
+      // ── Audience: only customers with phone who agreed to receive promotions ──
+      let audience = [];
+      async function loadAudience() {
+        const qs = new URLSearchParams();
+        if ($('#aud-type').value) qs.set('type', $('#aud-type').value);
+        if ($('#aud-q').value.trim()) qs.set('q', $('#aud-q').value.trim());
+        const res = await api.get('/promotions/audience?' + qs);
+        const already = new Set(current.recipients.map(r => r.customerId));
+        audience = res.customers.filter(c => !already.has(c.id));
+        $('#aud-list').innerHTML = audience.length ? audience.map(c => `
+          <label class="aud-item"><input type="checkbox" value="${c.id}">
+            <span><b>${esc(c.name)}</b><small class="muted">${esc(phoneText(c.phone))} · ${c.type === 'Mayorista' ? `Mayorista ${fmt.qty(c.discountPercent)} %` : 'Minorista'}${c.lastPurchase ? ' · última compra ' + fmt.date(c.lastPurchase) : ''}</small></span></label>`).join('')
+          : '<p class="muted" style="margin:0">No hay más clientes que puedan recibir promociones con este filtro.</p>';
+        $('#aud-note').textContent = res.withoutConsent
+          ? `${res.withoutConsent} cliente(s) no aparecen porque no han aceptado recibir promociones o no tienen teléfono. Márcalo en Clientes cuando te den permiso.` : '';
+        $('#aud-all').checked = false;
+      }
+      $('#add-recipients').addEventListener('click', async () => { $('#aud-q').value = ''; $('#aud-type').value = ''; await loadAudience(); $('#audience-dialog').showModal(); });
+      let audTimer;
+      $('#aud-q').addEventListener('input', () => { clearTimeout(audTimer); audTimer = setTimeout(loadAudience, 250); });
+      $('#aud-type').addEventListener('change', loadAudience);
+      $('#aud-all').addEventListener('change', e => $$('#aud-list input').forEach(i => { i.checked = e.target.checked; }));
+      $('#aud-add').addEventListener('click', async () => {
+        const ids = $$('#aud-list input:checked').map(i => Number(i.value));
+        if (!ids.length) { toast('Selecciona al menos un cliente.', 'error'); return; }
+        try {
+          current = await api.post(`/promotions/${current.id}/recipients`, { customerIds: ids });
+          $('#audience-dialog').close();
+          toast(`${ids.length} cliente(s) agregados.`);
+          renderRecipients();
+          loadList();
+        } catch (err) { fail(err); }
+      });
+
+      $('#new-promo').hidden = !canEdit;
+      $('#new-promo').addEventListener('click', () => openEditor(null));
+      $('#promos').addEventListener('click', async e => {
+        const item = e.target.closest('[data-id]');
+        if (item) { try { openEditor(await api.get('/promotions/' + item.dataset.id)); } catch (err) { fail(err); } }
+      });
+      await loadList();
+      if (list.length) openEditor(await api.get('/promotions/' + list[0].id));
+    });
+  </script>
+</body>
+</html>

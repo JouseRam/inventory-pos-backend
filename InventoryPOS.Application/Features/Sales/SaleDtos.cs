@@ -10,7 +10,12 @@ public record SaleItemSaveDto(int VariantId, decimal Quantity, decimal? UnitPric
 /// <summary>Amount is what the customer hands over; cash may exceed the total and produces change.</summary>
 public record SalePaymentSaveDto(string Method, decimal Amount, string? Reference);
 
-public record SaleCreateDto(int? CustomerId, decimal Discount, string? Notes, List<SaleItemSaveDto> Items, List<SalePaymentSaveDto> Payments);
+/// <summary>
+/// Discount is the cashier's own; a wholesale customer's percentage is added by the server. Without CustomerId, a phone
+/// links the sale to the customer with that number, or registers a new one (with CustomerName if given).
+/// </summary>
+public record SaleCreateDto(int? CustomerId, decimal Discount, string? Notes, List<SaleItemSaveDto> Items, List<SalePaymentSaveDto> Payments,
+    string? CustomerPhone = null, string? CustomerName = null, bool AcceptsPromotions = false);
 
 public record SaleCancelDto(string Reason);
 
@@ -21,7 +26,7 @@ public record SaleDto(
     int Id, string Folio, DateTime CreatedAt, int? CustomerId, string CustomerName, int CashSessionId,
     decimal Subtotal, decimal Discount, decimal Tax, decimal Total, decimal AmountPaid, decimal Change,
     string PaymentMethod, string Status, string? Notes, string? CancelReason, DateTime? CancelledAt, string? UserId, int ItemCount,
-    IReadOnlyList<SaleItemDto>? Items, IReadOnlyList<SalePaymentDto>? Payments);
+    IReadOnlyList<SaleItemDto>? Items, IReadOnlyList<SalePaymentDto>? Payments, decimal CustomerDiscountPercent = 0);
 
 internal static class SaleMappings
 {
@@ -37,7 +42,8 @@ internal static class SaleMappings
             methods.Count == 1 ? methods[0] : methods.Count == 0 ? "-" : MixedPayment,
             s.Status, s.Notes, s.CancelReason, s.CancelledAt, s.UserId, s.Items.Count,
             withDetails ? s.Items.Select(i => new SaleItemDto(i.Id, i.VariantId, i.Description, i.Quantity, i.UnitPrice, i.Discount, i.Subtotal)).ToList() : null,
-            withDetails ? s.Payments.Select(p => new SalePaymentDto(p.Method, p.Amount, p.Reference)).ToList() : null);
+            withDetails ? s.Payments.Select(p => new SalePaymentDto(p.Method, p.Amount, p.Reference)).ToList() : null,
+            s.CustomerDiscountPercent);
     }
 }
 
@@ -63,6 +69,9 @@ public class SaleCreateValidator : AbstractValidator<SaleCreateDto>
             p.RuleFor(i => i.Reference).MaximumLength(100);
         });
         RuleFor(x => x.Notes).MaximumLength(500);
+        RuleFor(x => x.CustomerPhone).Must(p => Domain.Common.PhoneNumber.Normalize(p) != null)
+            .When(x => !string.IsNullOrWhiteSpace(x.CustomerPhone)).WithMessage("El teléfono debe tener 10 dígitos.");
+        RuleFor(x => x.CustomerName).MaximumLength(200);
     }
 }
 

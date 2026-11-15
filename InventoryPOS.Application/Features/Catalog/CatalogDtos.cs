@@ -1,5 +1,7 @@
 using FluentValidation;
 using InventoryPOS.Application.Features.Invoicing;
+using InventoryPOS.Domain.Common;
+using InventoryPOS.Domain.Constants;
 using InventoryPOS.Domain.Entities;
 
 namespace InventoryPOS.Application.Features.Catalog;
@@ -14,10 +16,15 @@ public record SupplierDto(int Id, string Name, string? ContactName, string? Phon
 public record SupplierSaveDto(string Name, string? ContactName, string? Phone, string? Email, string? Address, bool IsActive = true);
 
 public record CustomerDto(int Id, string Name, string? Phone, string? Email, string? Address, string? Notes, bool IsActive, DateTime CreatedAt,
-    string? TaxId, string? LegalName, string? TaxRegime, string? TaxZipCode, string? CfdiUse);
-/// <summary>Fiscal fields are all empty (the customer does not invoice) or all filled.</summary>
+    string? TaxId, string? LegalName, string? TaxRegime, string? TaxZipCode, string? CfdiUse,
+    string Type = CustomerTypes.Retail, decimal DiscountPercent = 0, bool AcceptsPromotions = false);
+/// <summary>
+/// Fiscal fields are all empty (the customer does not invoice) or all filled. The phone is stored as 10 digits.
+/// DiscountPercent applies only to a Mayorista.
+/// </summary>
 public record CustomerSaveDto(string Name, string? Phone, string? Email, string? Address, string? Notes, bool IsActive = true,
-    string? TaxId = null, string? LegalName = null, string? TaxRegime = null, string? TaxZipCode = null, string? CfdiUse = null);
+    string? TaxId = null, string? LegalName = null, string? TaxRegime = null, string? TaxZipCode = null, string? CfdiUse = null,
+    string? Type = null, decimal DiscountPercent = 0, bool AcceptsPromotions = false);
 
 internal static class CatalogMappings
 {
@@ -31,7 +38,7 @@ internal static class CatalogMappings
 
     public static CustomerDto ToDto(this Customer c) =>
         new(c.Id, c.Name, c.Phone, c.Email, c.Address, c.Notes, c.IsActive, c.CreatedAt,
-            c.TaxId, c.LegalName, c.TaxRegime, c.TaxZipCode, c.CfdiUse);
+            c.TaxId, c.LegalName, c.TaxRegime, c.TaxZipCode, c.CfdiUse, c.Type, c.DiscountPercent, c.AcceptsPromotions);
 }
 
 public class BrandSaveValidator : AbstractValidator<BrandSaveDto>
@@ -67,8 +74,16 @@ public class CustomerSaveValidator : AbstractValidator<CustomerSaveDto>
     {
         RuleFor(x => x.Name).NotEmpty().WithMessage("El nombre es requerido.").MaximumLength(200);
         RuleFor(x => x.Email).EmailAddress().WithMessage("Correo inválido.").When(x => !string.IsNullOrWhiteSpace(x.Email));
-        RuleFor(x => x.Phone).MaximumLength(30);
+        RuleFor(x => x.Phone).Must(p => PhoneNumber.Normalize(p) != null).When(x => !string.IsNullOrWhiteSpace(x.Phone))
+            .WithMessage("El teléfono debe tener 10 dígitos.");
         RuleFor(x => x.Notes).MaximumLength(1000);
+        RuleFor(x => x.Type).Must(t => CustomerTypes.All.Contains(t)).When(x => x.Type != null)
+            .WithMessage("El tipo de cliente es Minorista o Mayorista.");
+        RuleFor(x => x.DiscountPercent).InclusiveBetween(0, 100).WithMessage("El descuento va de 0 a 100 %.");
+        RuleFor(x => x.DiscountPercent).GreaterThan(0).When(x => x.Type == CustomerTypes.Wholesale)
+            .WithMessage("Indica el porcentaje de descuento del mayorista.");
+        RuleFor(x => x.Phone).NotEmpty().When(x => x.AcceptsPromotions)
+            .WithMessage("Para enviarle promociones captura su teléfono.");
 
         When(x => HasAnyFiscalData(x), () =>
         {

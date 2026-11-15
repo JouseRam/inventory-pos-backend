@@ -2,6 +2,7 @@ using InventoryPOS.Application.Common;
 using InventoryPOS.Application.Features.Invoicing;
 using InventoryPOS.Application.Features.Sync;
 using InventoryPOS.Domain.Common;
+using InventoryPOS.Domain.Constants;
 using InventoryPOS.Domain.Entities;
 using InventoryPOS.Domain.Interfaces;
 
@@ -205,8 +206,12 @@ public class CustomerService(IUnitOfWork uow)
     public async Task<IReadOnlyList<CustomerDto>> ListAsync(string? q, bool includeInactive, CancellationToken ct = default)
     {
         var term = q?.Trim();
+        // Phones are stored as digits: "771 104" finds 7711042290.
+        var digits = term == null ? "" : new string(term.Where(char.IsDigit).ToArray());
+        var byPhone = digits.Length >= 3 && digits.Length * 2 >= term!.Replace(" ", "").Length;
         var customers = await Repo.ListAsync(c => (includeInactive || c.IsActive) &&
-            (string.IsNullOrEmpty(term) || c.Name.Contains(term) || (c.Phone != null && c.Phone.Contains(term)) || (c.Email != null && c.Email.Contains(term)) ||
+            (string.IsNullOrEmpty(term) || c.Name.Contains(term) || (c.Phone != null && (c.Phone.Contains(term) || (byPhone && c.Phone.Contains(digits))))
+            || (c.Email != null && c.Email.Contains(term)) ||
             (c.TaxId != null && c.TaxId.Contains(term)) || (c.LegalName != null && c.LegalName.Contains(term))), ct);
         return customers.OrderBy(c => c.Name).Select(c => c.ToDto()).ToList();
     }
@@ -240,14 +245,25 @@ public class CustomerService(IUnitOfWork uow)
         await uow.SaveChangesAsync(ct);
     }
 
+    /// <summary>Records when the customer agreed to receive promotions (and forgets it when they withdraw).</summary>
+    internal static void SetConsent(Customer c, bool accepts)
+    {
+        if (accepts && !c.AcceptsPromotions) c.PromotionsConsentAt = DateTime.UtcNow;
+        if (!accepts) c.PromotionsConsentAt = null;
+        c.AcceptsPromotions = accepts;
+    }
+
     private static void Apply(Customer c, CustomerSaveDto dto)
     {
         c.Name = dto.Name.Trim();
-        c.Phone = dto.Phone?.Trim();
+        c.Phone = PhoneNumber.Normalize(dto.Phone);
         c.Email = dto.Email?.Trim();
         c.Address = dto.Address?.Trim();
         c.Notes = dto.Notes?.Trim();
         c.IsActive = dto.IsActive;
+        c.Type = dto.Type ?? CustomerTypes.Retail;
+        c.DiscountPercent = c.Type == CustomerTypes.Wholesale ? Math.Round(dto.DiscountPercent, 2) : 0;
+        SetConsent(c, dto.AcceptsPromotions);
         c.TaxId = FiscalRules.Normalize(dto.TaxId);
         c.LegalName = FiscalRules.Normalize(dto.LegalName);
         c.TaxRegime = FiscalRules.Normalize(dto.TaxRegime);

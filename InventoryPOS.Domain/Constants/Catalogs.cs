@@ -72,3 +72,20 @@ public static class InvoiceStatus
     public const string Active = "Vigente";
     public const string Cancelled = "Cancelada";
 }
+
+public static class CustomerTypes
+{
+    public const string Retail = "Minorista";
+    public const string Wholesale = "Mayorista";
+
+    public static readonly string[] All = [Retail, Wholesale];
+}
+
+public static class PromotionRecipientStatus
+{
+    public const string Pending = "Pendiente";
+    public const string Sent = "Enviado";
+    public const string Skipped = "Omitido";
+
+    public static readonly string[] All = [Pending, Sent, Skipped];
+}

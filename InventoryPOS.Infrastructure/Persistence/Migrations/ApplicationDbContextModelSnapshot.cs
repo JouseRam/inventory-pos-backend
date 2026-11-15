@@ -229,6 +229,9 @@ namespace InventoryPOS.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("AcceptsPromotions")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Address")
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
@@ -239,6 +242,10 @@ namespace InventoryPOS.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<decimal>("DiscountPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
 
                     b.Property<string>("Email")
                         .HasMaxLength(150)
@@ -264,6 +271,9 @@ namespace InventoryPOS.Infrastructure.Persistence.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
+                    b.Property<DateTime?>("PromotionsConsentAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("TaxId")
                         .HasMaxLength(13)
                         .HasColumnType("nvarchar(13)");
@@ -275,6 +285,13 @@ namespace InventoryPOS.Infrastructure.Persistence.Migrations
                     b.Property<string>("TaxZipCode")
                         .HasMaxLength(5)
                         .HasColumnType("nvarchar(5)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Minorista");
 
                     b.Property<Guid>("Uid")
                         .HasColumnType("uniqueidentifier");
@@ -773,6 +790,106 @@ namespace InventoryPOS.Infrastructure.Persistence.Migrations
                     b.ToTable("ProductVariants", (string)null);
                 });
 
+            modelBuilder.Entity("InventoryPOS.Domain.Entities.Promotion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("Image")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("ImageType")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(1500)
+                        .HasColumnType("nvarchar(1500)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<Guid>("Uid")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Uid")
+                        .IsUnique();
+
+                    b.ToTable("Promotions", (string)null);
+                });
+
+            modelBuilder.Entity("InventoryPOS.Domain.Entities.PromotionRecipient", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
+
+                    b.Property<int>("PromotionId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<Guid>("Uid")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("Uid")
+                        .IsUnique();
+
+                    b.HasIndex("PromotionId", "CustomerId")
+                        .IsUnique();
+
+                    b.ToTable("PromotionRecipients", (string)null);
+                });
+
             modelBuilder.Entity("InventoryPOS.Domain.Entities.Purchase", b =>
                 {
                     b.Property<int>("Id")
@@ -916,6 +1033,10 @@ namespace InventoryPOS.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<decimal>("CustomerDiscountPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
 
                     b.Property<int?>("CustomerId")
                         .HasColumnType("int");
@@ -1678,6 +1799,25 @@ namespace InventoryPOS.Infrastructure.Persistence.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("InventoryPOS.Domain.Entities.PromotionRecipient", b =>
+                {
+                    b.HasOne("InventoryPOS.Domain.Entities.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventoryPOS.Domain.Entities.Promotion", "Promotion")
+                        .WithMany("Recipients")
+                        .HasForeignKey("PromotionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Promotion");
+                });
+
             modelBuilder.Entity("InventoryPOS.Domain.Entities.Purchase", b =>
                 {
                     b.HasOne("InventoryPOS.Domain.Entities.Supplier", "Supplier")
@@ -1854,6 +1994,11 @@ namespace InventoryPOS.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("InventoryPOS.Domain.Entities.ProductVariant", b =>
                 {
                     b.Navigation("Batches");
+                });
+
+            modelBuilder.Entity("InventoryPOS.Domain.Entities.Promotion", b =>
+                {
+                    b.Navigation("Recipients");
                 });
 
             modelBuilder.Entity("InventoryPOS.Domain.Entities.Purchase", b =>

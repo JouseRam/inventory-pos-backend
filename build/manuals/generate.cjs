@@ -88,8 +88,10 @@ async function seed() {
   const customer = async c => (await call('POST', '/customers', c)).id;
   const ana = await customer({ name: 'Ana López', phone: '771 104 2290', email: 'ana.lopez@example.com', notes: '7.1 con oxidante 20 vol; sensible al amoniaco',
     taxId: 'XOJI740919U48', legalName: 'INGRID XODAR JIMENEZ', taxRegime: '612', taxZipCode: '88965', cfdiUse: 'G03' });
-  await customer({ name: 'Sofía Hernández', phone: '771 332 8810', notes: 'Rubio claro, matizar cada 6 semanas' });
-  await customer({ name: 'Estética Luna', phone: '771 222 4500', email: 'compras@esteticaluna.example.com' });
+  await customer({ name: 'Sofía Hernández', phone: '771 332 8810', notes: 'Rubio claro, matizar cada 6 semanas', acceptsPromotions: true });
+  await customer({ name: 'Estética Luna', phone: '771 222 4500', email: 'compras@esteticaluna.example.com', type: 'Mayorista', discountPercent: 15, acceptsPromotions: true });
+  await customer({ name: 'Salón Brillo', phone: '771 410 7788', type: 'Mayorista', discountPercent: 10, acceptsPromotions: true });
+  await customer({ name: 'Carmen Ruiz', phone: '771 290 1133' });
 
   const session = await call('POST', '/cash-sessions/open', { openingAmount: 800, notes: 'Fondo de la mañana' });
   const sell = (items, payments, customerId = null, discount = 0) => call('POST', '/sales', {
@@ -141,7 +143,30 @@ const SHOTS = [
   { name: 'catalogs', url: '/catalogs.html' },
   { name: 'customers', url: '/customers.html' },
   { name: 'customer-fiscal', url: '/customers.html', prepare: async p => { await p.click('[data-edit="0"]'); await p.waitForTimeout(600); await p.evaluate(() => document.querySelector('dialog[open] fieldset.fiscal')?.scrollIntoView()); } },
+  { name: 'customer-wholesale', url: '/customers.html', prepare: async p => {
+      await p.locator('#crud tbody tr', { hasText: 'Estética Luna' }).locator('[data-edit]').click(); await p.waitForTimeout(600); } },
   { name: 'suppliers', url: '/suppliers.html' },
+  { name: 'pos-wholesale', url: '/pos.html', prepare: async p => {
+      await p.fill('#search', '7.1'); await p.waitForTimeout(900); await p.click('#results .shade-card'); await p.click('#results .shade-card');
+      await p.click('[data-ctype=Mayorista]'); await p.fill('#ws-search', 'luna'); await p.waitForTimeout(200); await p.click('[data-ws]'); await p.waitForTimeout(400); } },
+  { name: 'promotions', url: '/promotions.html', prepare: async p => {
+      // A promotion with a picture made on the spot, sent to the customers who agreed.
+      const exists = await p.evaluate(async () => (await POS.api.get('/promotions')).length);
+      if (!exists) {
+        await p.click('#new-promo');
+        await p.fill('#promo-form [name=title]', '2x1 en tintes este fin de semana');
+        await p.fill('#promo-form [name=message]', 'Lleva dos tintes Igora Royal y paga uno. Válido sábado y domingo, hasta agotar existencias.');
+        const png = await p.evaluate(() => { const c = Object.assign(document.createElement('canvas'), { width: 1200, height: 900 }); const g = c.getContext('2d');
+          const gr = g.createLinearGradient(0, 0, 1200, 900); gr.addColorStop(0, '#9c1f5c'); gr.addColorStop(1, '#f2a65a'); g.fillStyle = gr; g.fillRect(0, 0, 1200, 900);
+          g.fillStyle = '#fff'; g.font = 'bold 220px sans-serif'; g.textAlign = 'center'; g.fillText('2x1', 600, 470); g.font = '600 70px sans-serif'; g.fillText('en tintes', 600, 590);
+          return c.toDataURL('image/png').split(',')[1]; });
+        await p.setInputFiles('#promo-file', { name: 'promo.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
+        await p.waitForTimeout(500); await p.click('#promo-form button[type=submit]'); await p.waitForTimeout(1200);
+        await p.evaluate(async () => { const promo = (await POS.api.get('/promotions'))[0]; const aud = await POS.api.get('/promotions/audience');
+          const full = await POS.api.post(`/promotions/${promo.id}/recipients`, { customerIds: aud.customers.map(c => c.id) });
+          await POS.api.put(`/promotions/${promo.id}/recipients/${full.recipients[0].id}`, { status: 'Enviado' }); });
+        await p.reload(); await p.waitForTimeout(1500);
+      } } },
   { name: 'dashboard', url: '/dashboard.html' },
   { name: 'reports', url: '/reports.html' },
   { name: 'settings-business', url: '/settings.html#business' },

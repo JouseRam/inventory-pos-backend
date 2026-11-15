@@ -36,8 +36,7 @@ public class SaleService(
         var userId = currentUser.RequireUserId();
         var session = await uow.CashSessions.GetOpenByUserAsync(userId, ct)
             ?? throw new DomainException("Abre la caja antes de registrar ventas.");
-        if (dto.CustomerId.HasValue && !await uow.Repository<Customer>().AnyAsync(c => c.Id == dto.CustomerId && c.IsActive, ct))
-            throw NotFoundException.For("Cliente", dto.CustomerId.Value);
+        var customer = await ResolveCustomerAsync(dto, ct);
         var taxRate = await settings.GetDecimalAsync(SettingKeys.TaxRate, 16m, ct);
 
         var saleId = await uow.ExecuteInTransactionAsync(async () =>
@@ -46,7 +45,7 @@ public class SaleService(
             var variants = (await uow.Variants.GetByIdsWithProductAsync(dto.Items.Select(i => i.VariantId).Distinct(), ct))
                 .ToDictionary(v => v.Id);
 
-            var sale = new Sale { Folio = folio, CustomerId = dto.CustomerId, CashSessionId = session.Id, Notes = dto.Notes?.Trim(), UserId = userId };
+            var sale = new Sale { Folio = folio, Customer = customer, CashSessionId = session.Id, Notes = dto.Notes?.Trim(), UserId = userId };
             foreach (var line in dto.Items)
             {
                 if (!variants.TryGetValue(line.VariantId, out var variant) || !variant.IsActive || !variant.Product.IsActive)
@@ -70,7 +69,11 @@ public class SaleService(
             }
 
             sale.Subtotal = sale.Items.Sum(i => i.Subtotal);
-            sale.Discount = Money.Round(dto.Discount);
+            // A wholesale customer's percentage is applied here, from their record, on top of the cashier's discount.
+            var wholesale = customer is { Type: CustomerTypes.Wholesale, DiscountPercent: > 0 }
+                ? Money.Round(sale.Subtotal * customer.DiscountPercent / 100m) : 0m;
+            sale.CustomerDiscountPercent = wholesale > 0 ? customer!.DiscountPercent : 0;
+            sale.Discount = Money.Round(dto.Discount) + wholesale;
             if (sale.Discount > sale.Subtotal) throw new DomainException("El descuento general excede el subtotal.");
             sale.Total = sale.Subtotal - sale.Discount;
             sale.Tax = taxRate > 0 ? Money.Round(sale.Total - sale.Total / (1 + taxRate / 100m)) : 0;
@@ -82,6 +85,40 @@ public class SaleService(
         }, ct);
 
         return await GetAsync(saleId, ct);
+    }
+
+    /// <summary>
+    /// The sale's customer: the one chosen, or the one with the phone captured at checkout (registered on the spot when
+    /// new). A customer who agrees at the counter is marked as accepting promotions; the counter never withdraws consent.
+    /// </summary>
+    private async Task<Customer?> ResolveCustomerAsync(SaleCreateDto dto, CancellationToken ct)
+    {
+        var customers = uow.Repository<Customer>();
+        if (dto.CustomerId.HasValue)
+        {
+            var chosen = await customers.FirstOrDefaultAsync(c => c.Id == dto.CustomerId && c.IsActive, ct)
+                ?? throw NotFoundException.For("Cliente", dto.CustomerId.Value);
+            if (dto.AcceptsPromotions && chosen.Phone != null) Catalog.CustomerService.SetConsent(chosen, true);
+            return chosen;
+        }
+
+        var phone = PhoneNumber.Normalize(dto.CustomerPhone);
+        if (phone == null) return null;
+        var customer = await customers.FirstOrDefaultAsync(c => c.Phone == phone, ct);
+        if (customer == null)
+        {
+            customers.Add(customer = new Customer
+            {
+                Name = string.IsNullOrWhiteSpace(dto.CustomerName) ? $"Cliente {PhoneNumber.Format(phone)}" : dto.CustomerName.Trim(),
+                Phone = phone,
+            });
+        }
+        else if (!customer.IsActive)
+        {
+            customer.IsActive = true;
+        }
+        if (dto.AcceptsPromotions) Catalog.CustomerService.SetConsent(customer, true);
+        return customer;
     }
 
     /// <summary>Cancels a sale while its cash session is open, returning the stock to the original lots.</summary>

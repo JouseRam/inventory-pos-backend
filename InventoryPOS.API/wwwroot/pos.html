@@ -46,7 +46,10 @@
     .stepper button { border: 0; background: none; color: var(--ink); width: 26px; height: 26px; cursor: pointer; font-size: 1rem; }
     .stepper input { width: 52px; border: 0; text-align: center; padding: 2px; font: 600 .85rem var(--font-mono); }
     .totals { padding: 12px 18px; display: grid; gap: 6px; font-family: var(--font-mono); font-size: .9rem; }
-    .totals div { display: flex; justify-content: space-between; gap: 10px; }
+    .totals > div:not(.customer-picker) { display: flex; justify-content: space-between; gap: 10px; }
+    /* The customer block keeps its own layout: type toggle, then the list or the wholesale search. */
+    .totals .customer-picker { font-family: var(--font-body); min-width: 0; }
+    .totals .customer-picker .ws-results, .totals .customer-picker #wholesale-wrap { display: grid; gap: 6px; }
     .totals .grand { font: 650 1.9rem var(--font-display); letter-spacing: -.02em; align-items: baseline; border-top: 1px solid var(--line); padding-top: 8px; margin-top: 4px; }
     .totals .grand small { font: 600 .75rem var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
     .ticket-actions { padding: 0 18px 18px; display: grid; gap: 10px; }
@@ -93,10 +96,22 @@
         </div>
         <div class="lines" id="lines"></div>
         <div class="totals">
-          <label class="field"><span>Cliente</span>
-            <select id="customer"><option value="">Mostrador</option></select></label>
+          <div class="customer-picker">
+            <div class="seg-toggle" role="group" aria-label="Tipo de cliente">
+              <button type="button" data-ctype="Minorista" aria-pressed="true">Minorista</button>
+              <button type="button" data-ctype="Mayorista" aria-pressed="false">Mayorista</button>
+            </div>
+            <label class="field" id="retail-wrap"><span>Cliente</span>
+              <select id="customer"><option value="">Mostrador</option></select></label>
+            <div id="wholesale-wrap" hidden>
+              <label class="field"><span>Buscar cliente mayorista</span><input id="ws-search" placeholder="Nombre o teléfono" autocomplete="off"></label>
+              <div class="ws-results" id="ws-results"></div>
+            </div>
+            <div class="ws-chosen" id="ws-chosen" hidden></div>
+          </div>
           <div><span>Subtotal</span><span id="t-sub">$0.00</span></div>
           <div style="align-items:center"><span>Descuento</span><input id="discount" type="number" min="0" step="0.01" value="0" style="width:110px;text-align:right" class="mono"></div>
+          <div id="t-ws-row" hidden><span id="t-ws-label">Descuento mayorista</span><span id="t-ws" class="ws-amount"></span></div>
           <div class="grand"><small>Total</small><span id="t-total">$0.00</span></div>
           <div class="muted" style="font-size:.78rem"><span id="t-tax">IVA incluido</span></div>
         </div>
@@ -136,6 +151,15 @@
             <label class="field"><span>Referencia</span><input id="pay-transfer-ref" maxlength="100" class="mono"></label>
           </div>
           <div class="pay-status" id="pay-status"></div>
+          <fieldset class="pay-customer" id="pay-customer">
+            <legend><i class="bi bi-person-plus"></i> Cliente <small class="muted">(opcional)</small></legend>
+            <div class="pay-customer-fields" id="pay-phone-fields">
+              <label class="field"><span>Teléfono</span><input id="pay-phone" inputmode="tel" maxlength="20" placeholder="771 104 2290" autocomplete="off"></label>
+              <label class="field"><span>Nombre</span><input id="pay-name" maxlength="200" autocomplete="off"></label>
+            </div>
+            <p class="muted pay-customer-note" id="pay-customer-note"></p>
+            <label class="check" id="pay-consent-wrap"><input type="checkbox" id="pay-consent"> Acepta recibir promociones por WhatsApp</label>
+          </fieldset>
           <label class="field"><span>Notas</span><input id="pay-notes" maxlength="500"></label>
           <div class="form-error" hidden id="pay-error"></div>
         </div>

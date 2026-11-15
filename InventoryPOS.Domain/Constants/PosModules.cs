@@ -11,6 +11,8 @@ public static class PosModules
     public const string Purchases = "Purchases";
     public const string Customers = "Customers";
     public const string Suppliers = "Suppliers";
+    /// <summary>View: see promotions. Edit: create them and send them to customers.</summary>
+    public const string Promotions = "Promotions";
     public const string Reports = "Reports";
     /// <summary>View: download invoices. Edit: issue and cancel them.</summary>
     public const string Invoicing = "Invoicing";
@@ -30,6 +32,7 @@ public static class PosModules
         new(Purchases, "Compras", "bi-truck"),
         new(Customers, "Clientes", "bi-people"),
         new(Suppliers, "Proveedores", "bi-building"),
+        new(Promotions, "Promociones", "bi-megaphone"),
         new(Invoicing, "Facturación", "bi-receipt"),
         new(Reports, "Reportes", "bi-graph-up"),
         new(Settings, "Configuración", "bi-gear"),

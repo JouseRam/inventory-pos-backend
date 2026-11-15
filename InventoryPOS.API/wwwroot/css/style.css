@@ -110,6 +110,8 @@ a { color: var(--accent); }
   padding-block: 20px 48px; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px));
   display: grid; gap: 20px; align-content: start;
 }
+/* Grid children may shrink below their content: wide tables scroll inside their panel instead of widening the page. */
+.page > * { min-width: 0; }
 .menu-btn { display: none; }
 
 @media (max-width: 900px) {
@@ -318,3 +320,46 @@ dialog.labels-dialog { width: min(1040px, calc(100vw - 32px)); }
 .labels-preview { display: flex; flex-wrap: wrap; gap: 14px; padding: 14px; background: var(--surface-2); border-radius: var(--radius-sm); }
 .preview-cell { background: #fff; color: #000; box-shadow: 0 0 0 1px #d0d0d0; zoom: 3; }
 .labels-options .seg input { width: auto; flex: none; margin: 0; }
+
+/* ── POS: customer type, wholesale search and phone capture ── */
+.customer-picker { display: grid; gap: 8px; }
+.seg-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; width: max-content; }
+.seg-toggle button { border: 0; background: transparent; padding: 6px 14px; font: inherit; font-size: .88rem; color: var(--ink-2); cursor: pointer; }
+.seg-toggle button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.ws-results { display: grid; gap: 4px; max-height: 180px; overflow: auto; }
+.ws-option { display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-sm); padding: 6px 8px; font: inherit; cursor: pointer; color: var(--ink); }
+.ws-option:hover, .ws-option:focus-visible { border-color: var(--accent); }
+.ws-option span, .ws-chosen > span:not(.pill) { display: grid; }
+.ws-chosen { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius-sm); background: var(--accent-soft); }
+.ws-chosen > span:not(.pill) { flex: 1; min-width: 0; }
+.ws-amount { color: var(--good); }
+.pay-customer { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 8px 12px 10px; margin: 0; display: grid; gap: 8px; min-width: 0; }
+.pay-customer legend { font-weight: 600; font-size: .9rem; padding: 0 4px; }
+.pay-customer-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 520px) { .pay-customer-fields { grid-template-columns: 1fr; } }
+.pay-customer-note { margin: 0; font-size: .85rem; }
+
+/* ── Promotions ── */
+.promo-layout { display: grid; gap: 20px; grid-template-columns: minmax(240px, 300px) 1fr; align-items: start; }
+@media (max-width: 860px) { .promo-layout { grid-template-columns: 1fr; } }
+.promo-list > div { display: grid; }
+.promo-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; font: inherit; color: var(--ink); cursor: pointer; }
+.promo-item:hover, .promo-item.active { background: var(--accent-soft); }
+.promo-item img, .promo-noimg { width: 44px; height: 44px; object-fit: cover; border-radius: var(--radius-sm); flex: none; }
+.promo-noimg { display: grid; place-items: center; background: var(--surface-2); color: var(--muted); }
+.promo-item > span { display: grid; min-width: 0; }
+.promo-item b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.promo-detail { display: grid; gap: 20px; min-width: 0; }
+.promo-editor { display: grid; gap: 20px; grid-template-columns: 1fr minmax(220px, 300px); }
+@media (max-width: 720px) { .promo-editor { grid-template-columns: 1fr; } }
+.promo-fields { display: grid; gap: 12px; align-content: start; }
+.promo-image-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+/* WhatsApp-like preview: deliberately WhatsApp's chat colours so it reads as the real message. */
+.wa-preview { background: #e5ddd5; border-radius: var(--radius); padding: 14px; align-self: start; }
+.wa-bubble { background: #dcf8c6; color: #111; border-radius: 8px; padding: 6px; box-shadow: 0 1px 1px rgba(0,0,0,.15); }
+.wa-bubble img { display: block; width: 100%; border-radius: 6px; margin-bottom: 6px; }
+.wa-text { font-size: .9rem; line-height: 1.35; padding: 2px 4px; overflow-wrap: anywhere; }
+.aud-list { display: grid; gap: 6px; max-height: 340px; overflow: auto; }
+.aud-item { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
+.aud-item input { width: auto; flex: none; }
+.aud-item span { display: grid; min-width: 0; }

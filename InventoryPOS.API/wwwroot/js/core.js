@@ -273,6 +273,7 @@
     { group: 'Personas', items: [
       { href: 'customers.html', label: 'Clientes', icon: 'bi-person-heart', module: 'Customers' },
       { href: 'suppliers.html', label: 'Proveedores', icon: 'bi-building', module: 'Suppliers' },
+      { href: 'promotions.html', label: 'Promociones', icon: 'bi-megaphone', module: 'Promotions' },
     ] },
     { group: 'Análisis', items: [
       { href: 'dashboard.html', label: 'Resumen del día', icon: 'bi-speedometer2', module: 'Dashboard' },

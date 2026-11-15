@@ -44,6 +44,15 @@ public class Customer : BaseEntity
     public string? Notes { get; set; }
     public bool IsActive { get; set; } = true;
 
+    // ── Pricing ──
+    /// <summary>Minorista or Mayorista; a wholesale customer gets <see cref="DiscountPercent"/> off every purchase.</summary>
+    public string Type { get; set; } = Constants.CustomerTypes.Retail;
+    public decimal DiscountPercent { get; set; }
+
+    // ── Promotions: only customers who agreed receive them ──
+    public bool AcceptsPromotions { get; set; }
+    public DateTime? PromotionsConsentAt { get; set; }
+
     // ── Fiscal data (CFDI 4.0); empty when the customer does not invoice ──
     /// <summary>RFC, uppercase: 12 characters for a persona moral, 13 for a persona física.</summary>
     public string? TaxId { get; set; }

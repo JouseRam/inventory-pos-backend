@@ -27,7 +27,8 @@ public record SupplierSync(Guid Uid, string Name, string? ContactName, string? P
 public record CustomerSync(Guid Uid, string Name, string? Phone, string? Email, string? Address, string? Notes, bool IsActive,
     DateTime CreatedAt, DateTime? UpdatedAt,
     bool CarriesFiscalData = false, string? TaxId = null, string? LegalName = null, string? TaxRegime = null,
-    string? TaxZipCode = null, string? CfdiUse = null);
+    string? TaxZipCode = null, string? CfdiUse = null,
+    bool CarriesPricing = false, string? Type = null, decimal DiscountPercent = 0, bool AcceptsPromotions = false, DateTime? PromotionsConsentAt = null);
 public record ProductSync(Guid Uid, string Name, string? Description, Guid? BrandUid, Guid? CategoryUid, Guid? SupplierUid,
     bool TracksBatches, bool IsActive);
 /// <summary>Catalog data of a variant; stock is owned by the register and travels separately.</summary>
@@ -56,7 +57,8 @@ public record SaleItemSync(Guid Uid, Guid VariantUid, string Description, decima
 public record SalePaymentSync(Guid Uid, string Method, decimal Amount, string? Reference);
 public record SaleSync(Guid Uid, string Folio, Guid? CustomerUid, Guid CashSessionUid, decimal Subtotal, decimal Discount, decimal Tax,
     decimal Total, decimal AmountPaid, decimal Change, string Status, string? Notes, string? CancelReason, DateTime? CancelledAt,
-    string? UserId, DateTime CreatedAt, IReadOnlyList<SaleItemSync> Items, IReadOnlyList<SalePaymentSync> Payments);
+    string? UserId, DateTime CreatedAt, IReadOnlyList<SaleItemSync> Items, IReadOnlyList<SalePaymentSync> Payments,
+    decimal CustomerDiscountPercent = 0);
 public record StockSync(Guid VariantUid, decimal Stock);
 
 /// <summary>Central → register: everything administered on the web that changed since the cursor.</summary>

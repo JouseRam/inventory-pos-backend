@@ -81,7 +81,7 @@
             ${s.items.map(i => `<div class="item"><div>${esc(i.description)}</div>
               <div class="row muted"><span>${fmt.qty(i.quantity)} × ${fmt.money(i.unitPrice)}${i.discount ? ' − ' + fmt.money(i.discount) : ''}</span><span style="color:var(--ink)">${fmt.money(i.subtotal)}</span></div></div>`).join('')}
             <div class="row"><span>Subtotal</span><span>${fmt.money(s.subtotal)}</span></div>
-            ${s.discount ? `<div class="row"><span>Descuento</span><span>− ${fmt.money(s.discount)}</span></div>` : ''}
+            ${s.discount ? `<div class="row"><span>Descuento${s.customerDiscountPercent ? ` (incluye mayorista ${fmt.qty(s.customerDiscountPercent)} %)` : ''}</span><span>− ${fmt.money(s.discount)}</span></div>` : ''}
             <div class="row grand"><span>Total</span><span>${fmt.money(s.total)}</span></div>
             <div class="row muted"><span>IVA incluido</span><span>${fmt.money(s.tax)}</span></div>
             ${s.payments.map(p => `<div class="row"><span>${esc(p.method)}${p.reference ? ' · ' + esc(p.reference) : ''}</span><span>${fmt.money(p.amount)}</span></div>`).join('')}

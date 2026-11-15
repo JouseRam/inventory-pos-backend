@@ -10,6 +10,7 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
     public void Configure(EntityTypeBuilder<Sale> e)
     {
         e.ToTable("Sales");
+        e.Property(x => x.CustomerDiscountPercent).HasPrecision(5, 2);
         e.Property(x => x.Folio).HasMaxLength(20).IsRequired();
         e.Property(x => x.Status).HasMaxLength(20).IsRequired();
         e.Property(x => x.Notes).HasMaxLength(500);
