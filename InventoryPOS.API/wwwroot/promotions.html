@@ -49,9 +49,25 @@
           <header><h2>Destinatarios</h2><span class="muted" id="recipients-count"></span>
             <button class="btn sm" type="button" id="add-recipients"><i class="bi bi-people"></i>Agregar clientes</button></header>
           <div class="body">
-            <div class="notice" style="margin-bottom:12px"><i class="bi bi-whatsapp"></i><div>
-              Pulsa <b>Enviar</b>: se copia la imagen y se abre el chat de WhatsApp del cliente con el texto listo.
-              En WhatsApp pega la imagen (<kbd>Ctrl</kbd>+<kbd>V</kbd>), envía y regresa aquí para marcarlo como enviado.</div></div>
+            <div class="send-modes">
+              <section class="send-mode">
+                <h3><i class="bi bi-broadcast"></i> A todos de una vez · lista de difusión</h3>
+                <p class="muted">Con <b>WhatsApp Business</b> un solo envío llega a todos los de la lista (hasta 256). Solo lo reciben quienes tienen guardado el número de la tienda.</p>
+                <ol class="steps">
+                  <li><button class="btn sm" type="button" id="export-vcf"><i class="bi bi-person-lines-fill"></i>Descargar contactos (.vcf)</button>
+                    y ábrelo en el celular de la tienda para agregarlos de golpe.</li>
+                  <li>En WhatsApp Business: <b>Nueva difusión</b> (o tu lista ya creada) y elige a estos contactos.</li>
+                  <li><button class="btn sm" type="button" id="copy-image"><i class="bi bi-image"></i>Copiar imagen</button>
+                    <button class="btn sm" type="button" id="copy-text"><i class="bi bi-clipboard"></i>Copiar mensaje</button> y pégalos en la difusión.</li>
+                  <li><button class="btn sm" type="button" id="mark-all"><i class="bi bi-check2-all"></i>Marcar todos como enviados</button></li>
+                </ol>
+              </section>
+              <section class="send-mode">
+                <h3><i class="bi bi-lightning-charge"></i> Uno por uno · modo rápido</h3>
+                <p class="muted">Para quien no tiene guardado tu número. Se abre el chat del siguiente pendiente con el texto listo y la imagen copiada: pégala (<kbd>Ctrl</kbd>+<kbd>V</kbd>) y envía.</p>
+                <div class="fast-send" id="fast-send"></div>
+              </section>
+            </div>
             <div class="table-wrap"><table>
               <thead><tr><th>Cliente</th><th>Teléfono</th><th>Estado</th><th></th></tr></thead>
               <tbody id="recipients"></tbody></table></div>
@@ -118,6 +134,7 @@
       // ── Editor ──
       function openEditor(p) {
         current = p;
+        inProgress = null;
         imageData = null; removeImage = false; imagePng = null;
         const f = $('#promo-form');
         f.hidden = false; $('#detail-empty').hidden = true;
@@ -187,9 +204,77 @@
         catch (err) { fail(err); }
       });
 
+      // ── Fast mode: one button sends to the next pending customer and, on return, marks the previous one sent ──
+      let inProgress = null;
+      function renderFast() {
+        const pending = current.recipients.filter(r => r.status === 'Pendiente');
+        const box = $('#fast-send');
+        if (!canEdit) { box.innerHTML = ''; return; }
+        if (inProgress) {
+          const r = current.recipients.find(x => x.id === inProgress);
+          const next = pending.find(x => x.id !== inProgress);
+          box.innerHTML = `<p style="margin:0 0 8px">Enviando a <b>${esc(r.name)}</b> · ${esc(phoneText(r.phone))}</p>
+            <div class="fast-actions">
+              <button class="btn primary" type="button" data-fast="next"><i class="bi bi-check2"></i>${next ? `Enviado · abrir a ${esc(next.name)}` : 'Enviado · terminar'}</button>
+              <button class="btn" type="button" data-fast="skip">Omitir</button>
+              <button class="btn ghost" type="button" data-fast="reopen">Volver a abrir su chat</button>
+            </div>`;
+        } else {
+          box.innerHTML = pending.length
+            ? `<button class="btn primary" type="button" data-fast="start"><i class="bi bi-whatsapp"></i>Empezar · ${pending.length} pendiente(s)</button>`
+            : '<p class="muted" style="margin:0">No hay clientes pendientes.</p>';
+        }
+      }
+      async function setStatus(id, status) {
+        const updated = await api.put(`/promotions/${current.id}/recipients/${id}`, { status });
+        Object.assign(current.recipients.find(r => r.id === id), updated);
+      }
+      $('#fast-send').addEventListener('click', async e => {
+        const action = e.target.closest('[data-fast]')?.dataset.fast;
+        if (!action) return;
+        try {
+          if (action === 'reopen') { await send(current.recipients.find(r => r.id === inProgress)); return; }
+          if (action === 'next' || action === 'skip') await setStatus(inProgress, action === 'next' ? 'Enviado' : 'Omitido');
+          const next = current.recipients.find(r => r.status === 'Pendiente' && r.id !== inProgress);
+          inProgress = next?.id ?? null;
+          if (next) await send(next);
+          else toast('Promoción enviada a todos los pendientes.');
+          renderRecipients();
+          loadList();
+        } catch (err) { fail(err); }
+      });
+
+      // ── Broadcast list: contacts file, message and image to paste once, then mark everyone ──
+      $('#export-vcf').addEventListener('click', () => {
+        const people = current.recipients.filter(r => r.status !== 'Omitido');
+        if (!people.length) { toast('Agrega clientes primero.', 'error'); return; }
+        const clean = t => t.replace(/[\r\n;,]/g, ' ').trim();
+        const vcf = people.map(r => ['BEGIN:VCARD', 'VERSION:3.0', `FN:${clean(r.name)}`, `N:${clean(r.name)};;;;`,
+          `TEL;TYPE=CELL:+52${r.phone}`, 'END:VCARD'].join('\r\n')).join('\r\n') + '\r\n';
+        const url = URL.createObjectURL(new Blob([vcf], { type: 'text/vcard' }));
+        const a = Object.assign(document.createElement('a'), { href: url, download: `clientes-${current.id}.vcf` });
+        document.body.append(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        toast(`${people.length} contacto(s) descargados.`);
+      });
+      $('#copy-text').addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(current.whatsAppText); toast('Mensaje copiado.'); } catch { fail(new Error('No se pudo copiar el mensaje.')); }
+      });
+      $('#copy-image').addEventListener('click', async () => {
+        if (!imagePng) { toast('Esta promoción no tiene imagen.', 'error'); return; }
+        try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': imagePng })]); toast('Imagen copiada.'); } catch { fail(new Error('No se pudo copiar la imagen.')); }
+      });
+      $('#mark-all').addEventListener('click', async () => {
+        const pending = current.recipients.filter(r => r.status === 'Pendiente');
+        if (!pending.length) { toast('No hay pendientes.'); return; }
+        if (!await confirmBox(`Marcar a los ${pending.length} pendiente(s) como enviados por la lista de difusión.`, { okText: 'Marcar enviados' })) return;
+        try { for (const r of pending) await setStatus(r.id, 'Enviado'); renderRecipients(); loadList(); toast('Marcados como enviados.'); } catch (err) { fail(err); }
+      });
+
       // ── Recipients and sending ──
       const statusPill = s => s === 'Enviado' ? '<span class="pill good">Enviado</span>' : s === 'Omitido' ? '<span class="pill">Omitido</span>' : '<span class="pill warn">Pendiente</span>';
       function renderRecipients() {
+        renderFast();
         const r = current.recipients;
         const sent = r.filter(x => x.status === 'Enviado').length;
         $('#recipients-count').textContent = r.length ? `${sent} de ${r.length} enviados` : '';

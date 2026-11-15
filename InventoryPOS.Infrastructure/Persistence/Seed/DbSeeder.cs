@@ -40,6 +40,7 @@ public class DbSeeder(ApplicationDbContext db, UserManager<AppUser> users, IConf
         await EnsureSequence(FolioSeries.Sale, "V-", ct);
         await EnsureSequence(FolioSeries.Purchase, "REC-", ct);
         await EnsureSequence(FolioSeries.CashSession, "CJ-", ct);
+        await EnsureSequence(FolioSeries.PurchaseOrder, "PED-", ct);
     }
 
     private async Task EnsureSequence(string name, string prefix, CancellationToken ct)

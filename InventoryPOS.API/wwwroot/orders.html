@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pedidos · Matiz</title>
+  <link rel="stylesheet" href="vendor/fonts.css">
+  <link rel="stylesheet" href="vendor/icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="page" id="page">
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="suggested">Sugeridos</button>
+      <button role="tab" aria-selected="false" data-tab="orders">Pedidos y rastreo</button>
+    </div>
+
+    <!-- ── Suggested orders per supplier ── -->
+    <section data-panel="suggested" style="display:grid;gap:16px">
+      <div class="toolbar">
+        <label class="field"><span>Ventas de los últimos</span><select id="s-days"><option value="30">30 días</option><option value="60">60 días</option><option value="90">90 días</option></select></label>
+        <label class="field"><span>Pedir para cubrir</span><select id="s-cover"><option value="15">15 días</option><option value="30" selected>30 días</option><option value="60">60 días</option></select></label>
+        <span class="grow"></span>
+        <button class="btn" type="button" id="new-manual"><i class="bi bi-pencil-square"></i>Armar pedido a mano</button>
+      </div>
+      <p class="muted" style="margin:0;font-size:.88rem">El sistema sugiere lo que está en su mínimo o se acabaría antes del periodo al ritmo en que se vende, agrupado por el proveedor que lo surte.
+        Las cantidades son editables; lo que ya va en camino en otro pedido no se vuelve a sugerir.</p>
+      <div id="suggestions" style="display:grid;gap:16px"></div>
+    </section>
+
+    <!-- ── Orders and tracking ── -->
+    <section data-panel="orders" hidden style="display:grid;gap:16px">
+      <div class="toolbar">
+        <label class="field"><span>Estado</span><select id="o-status"><option value="">Todos</option><option>Borrador</option><option>Enviado</option><option>En camino</option><option>Recibido</option><option>Cancelado</option></select></label>
+      </div>
+      <section class="panel"><div class="table-wrap"><table>
+        <thead><tr><th>Folio</th><th>Proveedor</th><th>Fecha</th><th>Estado</th><th class="num">Productos</th><th class="num">Estimado</th><th>Guía</th></tr></thead>
+        <tbody id="orders"></tbody></table></div></section>
+    </section>
+
+    <!-- ── One order: list, sending, tracking ── -->
+    <dialog id="order-dialog" aria-labelledby="order-title" style="width:min(980px,calc(100vw - 32px))">
+      <form method="dialog" novalidate>
+        <header><h2 id="order-title">Pedido</h2><span id="order-status"></span><button class="btn ghost icon-btn" value="cancel" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button></header>
+        <div class="body order-body">
+          <div class="order-main">
+            <div class="form-grid">
+              <label class="field"><span>Proveedor</span><select id="od-supplier"><option value="">Sin proveedor</option></select></label>
+              <label class="field span-2"><span>Notas para el proveedor</span><input id="od-notes" maxlength="1000" placeholder="Ej. entregar antes del viernes"></label>
+            </div>
+            <div class="table-wrap"><table class="order-lines">
+              <thead><tr><th>Producto</th><th class="num">Existencia</th><th class="num">Cantidad</th><th class="num">Costo unit.</th><th class="num">Importe</th><th></th></tr></thead>
+              <tbody id="od-lines"></tbody>
+              <tfoot><tr><td colspan="4" class="num">Total estimado</td><td class="num" id="od-total"></td><td></td></tr></tfoot>
+            </table></div>
+            <label class="field" data-editable><span>Agregar producto</span><input id="od-add" placeholder="Busca por nombre, tono, SKU o ID"></label>
+            <div class="form-error" hidden id="od-error"></div>
+            <div class="order-actions" id="od-actions"></div>
+          </div>
+
+          <aside class="order-side" id="od-side" hidden>
+            <section>
+              <h3><i class="bi bi-truck"></i> Rastreo</h3>
+              <div class="form-grid" style="grid-template-columns:1fr">
+                <label class="field"><span>Paquetería</span><select id="od-carrier"></select></label>
+                <label class="field"><span>Número de guía</span><input id="od-tracking" maxlength="60" class="mono" placeholder="Te lo da el proveedor al enviar"></label>
+              </div>
+              <div class="order-actions" style="margin-top:8px">
+                <button class="btn sm" type="button" id="od-save-tracking"><i class="bi bi-check2"></i>Guardar guía</button>
+                <a class="btn sm" id="od-track" target="_blank" rel="noopener" hidden><i class="bi bi-geo-alt"></i>Ver movimientos</a>
+              </div>
+            </section>
+            <section>
+              <h3><i class="bi bi-clock-history"></i> Movimientos del pedido</h3>
+              <div class="row-add">
+                <input id="od-event" maxlength="300" placeholder="Ej. Llegó al centro de distribución de Pachuca">
+                <button class="btn sm" type="button" id="od-add-event">Agregar</button>
+              </div>
+              <ol class="timeline" id="od-events"></ol>
+            </section>
+          </aside>
+        </div>
+      </form>
+    </dialog>
+  </main>
+  <script src="js/core.js"></script>
+  <script src="js/picker.js"></script>
+  <script>
+    POS.boot({ module: 'Purchases', title: 'Pedidos' }, async () => {
+      const { api, esc, fmt, toast, fail, confirmBox, session, $, $$ } = POS;
+      const canEdit = session.can('Purchases', true);
+      const phoneText = p => p && p.length === 10 ? `${p.slice(0, 3)} ${p.slice(3, 6)} ${p.slice(6)}` : (p || '');
+      const statusPill = s => `<span class="pill ${({ 'Borrador': '', 'Enviado': 'accent', 'En camino': 'warn', 'Recibido': 'good', 'Cancelado': '' })[s] ?? ''}">${esc(s)}</span>`;
+      const [suppliers, carriers] = await Promise.all([api.get('/suppliers').catch(() => []), api.get('/orders/carriers')]);
+      $('#od-supplier').insertAdjacentHTML('beforeend', suppliers.filter(s => s.isActive).map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join(''));
+      $('#od-carrier').innerHTML = carriers.map(c => `<option value="${c.code}">${esc(c.name)}</option>`).join('');
+      $('#new-manual').hidden = !canEdit;
+
+      // ── Tabs ──
+      function show(tab) {
+        $$('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
+        $$('[data-panel]').forEach(p => { p.hidden = p.dataset.panel !== tab; });
+        history.replaceState(null, '', '#' + tab);
+        (tab === 'orders' ? loadOrders : loadSuggestions)().catch(fail);
+      }
+      $$('[data-tab]').forEach(b => b.addEventListener('click', () => show(b.dataset.tab)));
+
+      // ── Suggestions ──
+      let suggestions = null;
+      async function loadSuggestions() {
+        suggestions = await api.get(`/orders/suggestions?days=${$('#s-days').value}&coverDays=${$('#s-cover').value}`);
+        $('#suggestions').innerHTML = suggestions.suppliers.length ? suggestions.suppliers.map((g, gi) => `
+          <section class="panel suggestion" data-group="${gi}">
+            <header><h2>${esc(g.supplierName)}</h2>
+              ${g.supplierId == null ? '<span class="pill warn">Asigna proveedor en Productos</span>' : g.hasWhatsApp ? '<span class="pill good"><i class="bi bi-whatsapp"></i>WhatsApp</span>' : '<span class="pill">Sin WhatsApp</span>'}
+              <span class="muted" data-gtotal>${fmt.money(g.estimatedTotal)} estimado</span></header>
+            <div class="table-wrap"><table>
+              <thead><tr><th><input type="checkbox" checked data-all aria-label="Incluir todos"></th><th>Producto</th><th class="num">Existencia / mín.</th>
+                <th class="num">Vendido</th><th>Por qué</th><th class="num">Pedir</th><th class="num">Costo</th></tr></thead>
+              <tbody>${g.lines.map((l, li) => `
+                <tr><td><input type="checkbox" checked data-inc="${li}" aria-label="Incluir"></td>
+                  <td>${esc(l.description)}<br><small class="muted mono">${esc(l.sku || '')}</small></td>
+                  <td class="num">${fmt.qty(l.stock)} / ${fmt.qty(l.minStock)}</td>
+                  <td class="num">${fmt.qty(l.soldInPeriod)}<br><small class="muted">${fmt.qty(l.dailyRate)}/día</small></td>
+                  <td><small>${esc(l.reason)}</small></td>
+                  <td class="num"><input type="number" min="0" step="1" value="${l.suggestedQuantity}" data-qty="${li}" class="qty-input" aria-label="Cantidad a pedir"></td>
+                  <td class="num">${fmt.money(l.unitCost)}</td></tr>`).join('')}</tbody></table></div>
+            ${canEdit ? `<footer class="suggestion-actions"><button class="btn primary" type="button" data-create="${gi}"><i class="bi bi-cart-plus"></i>Crear pedido con esta lista</button></footer>` : ''}
+          </section>`).join('')
+          : '<div class="panel empty">Nada que pedir por ahora: todo está arriba de su mínimo y alcanza para el periodo.</div>';
+      }
+      $('#s-days').addEventListener('change', () => loadSuggestions().catch(fail));
+      $('#s-cover').addEventListener('change', () => loadSuggestions().catch(fail));
+      $('#suggestions').addEventListener('change', e => {
+        const card = e.target.closest('[data-group]');
+        if (!card) return;
+        if (e.target.matches('[data-all]')) card.querySelectorAll('[data-inc]').forEach(c => { c.checked = e.target.checked; });
+        const g = suggestions.suppliers[card.dataset.group];
+        const total = g.lines.reduce((s, l, i) => card.querySelector(`[data-inc="${i}"]`).checked ? s + (Number(card.querySelector(`[data-qty="${i}"]`).value) || 0) * l.unitCost : s, 0);
+        card.querySelector('[data-gtotal]').textContent = `${fmt.money(total)} estimado`;
+      });
+      $('#suggestions').addEventListener('click', async e => {
+        const b = e.target.closest('[data-create]');
+        if (!b) return;
+        const card = b.closest('[data-group]');
+        const g = suggestions.suppliers[b.dataset.create];
+        const items = g.lines.map((l, i) => ({ variantId: l.variantId, quantity: Number(card.querySelector(`[data-qty="${i}"]`).value) || 0, unitCost: l.unitCost }))
+          .filter((x, i) => card.querySelector(`[data-inc="${i}"]`).checked && x.quantity > 0);
+        if (!items.length) { toast('Elige al menos un producto con cantidad.', 'error'); return; }
+        try {
+          const order = await api.post('/orders', { supplierId: g.supplierId, notes: null, items });
+          toast(`Pedido ${order.folio} creado. Revísalo y envíalo.`);
+          await openOrder(order);
+          loadSuggestions().catch(() => {});
+        } catch (err) { fail(err); }
+      });
+
+      // ── Orders list ──
+      async function loadOrders() {
+        const list = await api.get('/orders' + ($('#o-status').value ? '?status=' + encodeURIComponent($('#o-status').value) : ''));
+        $('#orders').innerHTML = list.length ? list.map(o => `
+          <tr class="clickable" data-id="${o.id}"><td class="mono">${esc(o.folio)}</td><td>${esc(o.supplierName || 'Sin proveedor')}</td><td>${fmt.date(o.createdAt)}</td>
+            <td>${statusPill(o.status)}</td><td class="num">${o.itemCount}</td><td class="num">${fmt.money(o.estimatedTotal)}</td>
+            <td>${o.trackingNumber ? `<span class="mono">${esc(o.trackingNumber)}</span><br><small class="muted">${esc(o.carrierName || '')}</small>` : '<span class="muted">—</span>'}</td></tr>`).join('')
+          : '<tr><td colspan="7" class="empty">Aún no hay pedidos. Créalos desde Sugeridos o a mano.</td></tr>';
+      }
+      $('#o-status').addEventListener('change', () => loadOrders().catch(fail));
+      $('#orders').addEventListener('click', async e => {
+        const row = e.target.closest('[data-id]');
+        if (row) { try { await openOrder(await api.get('/orders/' + row.dataset.id)); } catch (err) { fail(err); } }
+      });
+
+      // ── Order dialog ──
+      let order = null, lines = [];
+      const dlg = $('#order-dialog');
+      const open = () => order && !['Recibido', 'Cancelado'].includes(order.status) && canEdit;
+
+      function renderLines() {
+        const editable = !order || open();
+        $('#od-lines').innerHTML = lines.length ? lines.map((l, i) => `
+          <tr><td>${esc(l.description)}<br><small class="muted mono">${esc(l.sku || '')}</small></td>
+            <td class="num">${fmt.qty(l.stock ?? 0)}</td>
+            <td class="num">${editable ? `<input type="number" min="0.001" step="any" value="${l.quantity}" data-lq="${i}" class="qty-input" aria-label="Cantidad">` : fmt.qty(l.quantity)}</td>
+            <td class="num">${editable ? `<input type="number" min="0" step="0.01" value="${l.unitCost}" data-lc="${i}" class="qty-input" aria-label="Costo">` : fmt.money(l.unitCost)}</td>
+            <td class="num">${fmt.money(l.quantity * l.unitCost)}</td>
+            <td>${editable ? `<button class="btn ghost sm danger icon-btn" type="button" data-ldel="${i}" aria-label="Quitar"><i class="bi bi-x-lg"></i></button>` : ''}</td></tr>`).join('')
+          : '<tr><td colspan="6" class="empty">Agrega productos con el buscador de abajo.</td></tr>';
+        $('#od-total').textContent = fmt.money(lines.reduce((s, l) => s + l.quantity * l.unitCost, 0));
+        $$('[data-editable]', dlg).forEach(el => { el.hidden = !editable; });
+        $('#od-supplier').disabled = !editable;
+        $('#od-notes').disabled = !editable;
+      }
+      $('#od-lines').addEventListener('input', e => {
+        const q = e.target.dataset.lq, c = e.target.dataset.lc;
+        if (q !== undefined) lines[q].quantity = Number(e.target.value) || 0;
+        if (c !== undefined) lines[c].unitCost = Number(e.target.value) || 0;
+        $('#od-total').textContent = fmt.money(lines.reduce((s, l) => s + l.quantity * l.unitCost, 0));
+      });
+      $('#od-lines').addEventListener('click', e => {
+        const d = e.target.closest('[data-ldel]');
+        if (d) { lines.splice(Number(d.dataset.ldel), 1); renderLines(); }
+      });
+      variantPicker($('#od-add'), v => {
+        const same = lines.find(l => l.variantId === v.id);
+        if (same) same.quantity += 1;
+        else lines.push({ variantId: v.id, description: v.displayName, sku: v.sku, quantity: Math.max(1, Math.ceil((v.minStock || 1) * 2 - v.stock)), unitCost: v.cost, stock: v.stock });
+        $('#od-add').value = '';
+        renderLines();
+      });
+
+      function renderActions() {
+        const a = [];
+        if (!order) a.push('<button class="btn primary" type="button" data-act="save"><i class="bi bi-check2"></i>Crear pedido</button>');
+        else if (open()) {
+          a.push('<button class="btn" type="button" data-act="save"><i class="bi bi-check2"></i>Guardar cambios</button>');
+          if (order.whatsAppPhone) a.push(`<button class="btn primary" type="button" data-act="whatsapp"><i class="bi bi-whatsapp"></i>${order.status === 'Borrador' ? 'Enviar' : 'Reenviar'} por WhatsApp</button>`);
+          a.push('<button class="btn" type="button" data-act="copy"><i class="bi bi-clipboard"></i>Copiar pedido</button>');
+          if (order.status === 'Borrador') a.push('<button class="btn ghost" type="button" data-act="sent">Marcar como enviado</button>');
+          if (session.can('Purchases', true) && !POS.env.central) a.push('<button class="btn" type="button" data-act="receive"><i class="bi bi-box-arrow-in-down"></i>Recibir mercancía</button>');
+          a.push('<button class="btn ghost danger" type="button" data-act="cancel">Cancelar pedido</button>');
+        } else if (order.purchaseId) {
+          a.push(`<a class="btn ghost" href="purchases.html">Ver recepciones</a>`);
+        }
+        $('#od-actions').innerHTML = a.join('');
+        if (order && !order.whatsAppPhone && open())
+          $('#od-actions').insertAdjacentHTML('beforeend', '<p class="muted" style="margin:0;font-size:.85rem;flex-basis:100%">Para enviarlo por WhatsApp registra el teléfono del proveedor (10 dígitos) en Proveedores.</p>');
+      }
+
+      function renderSide() {
+        $('#od-side').hidden = !order;
+        if (!order) return;
+        $('#od-carrier').value = order.carrier || carriers[0].code;
+        $('#od-tracking').value = order.trackingNumber || '';
+        $('#od-track').hidden = !order.trackingUrl;
+        if (order.trackingUrl) { $('#od-track').href = order.trackingUrl; $('#od-track').innerHTML = `<i class="bi bi-geo-alt"></i>Ver movimientos en ${esc(order.carrierName)}`; }
+        ['#od-carrier', '#od-tracking', '#od-save-tracking', '#od-event', '#od-add-event'].forEach(id => { $(id).disabled = !canEdit || order.status === 'Cancelado'; });
+        $('#od-events').innerHTML = order.events.map(e => `<li class="${e.manual ? 'manual' : ''}"><time>${fmt.dateTime(e.at)}</time><span>${esc(e.text)}</span></li>`).join('');
+      }
+
+      async function openOrder(o) {
+        order = o;
+        lines = o ? o.items.map(i => ({ variantId: i.variantId, description: i.description, sku: i.sku, quantity: i.quantity, unitCost: i.unitCost, stock: i.stock })) : [];
+        $('#order-title').innerHTML = o ? `Pedido <span class="mono">${esc(o.folio)}</span>` : 'Nuevo pedido';
+        $('#order-status').innerHTML = o ? statusPill(o.status) : '';
+        $('#od-supplier').value = o?.supplierId ?? '';
+        $('#od-notes').value = o?.notes ?? '';
+        $('#od-error').hidden = true;
+        renderLines(); renderActions(); renderSide();
+        if (!dlg.open) dlg.showModal();
+      }
+      const refresh = async o => { await openOrder(o); loadOrders().catch(() => {}); };
+      // Tracking and timeline changes keep whatever is being edited in the list.
+      const refreshSide = o => {
+        order = o;
+        $('#order-status').innerHTML = statusPill(o.status);
+        renderActions(); renderSide();
+        loadOrders().catch(() => {});
+      };
+      const body = () => ({
+        supplierId: $('#od-supplier').value ? Number($('#od-supplier').value) : null,
+        notes: $('#od-notes').value.trim() || null,
+        items: lines.filter(l => l.quantity > 0).map(l => ({ variantId: l.variantId, quantity: l.quantity, unitCost: l.unitCost })),
+      });
+
+      $('#od-actions').addEventListener('click', async e => {
+        const act = e.target.closest('[data-act]')?.dataset.act;
+        if (!act) return;
+        $('#od-error').hidden = true;
+        try {
+          if (act === 'save') {
+            const saved = order ? await api.put(`/orders/${order.id}`, body()) : await api.post('/orders', body());
+            toast(order ? 'Pedido guardado.' : `Pedido ${saved.folio} creado.`);
+            await refresh(saved);
+          } else if (act === 'whatsapp') {
+            // Unsaved edits go first, so the supplier gets exactly what is on screen.
+            const saved = await api.put(`/orders/${order.id}`, body());
+            window.open(`https://wa.me/52${saved.whatsAppPhone}?text=${encodeURIComponent(saved.whatsAppText)}`, '_blank', 'noopener');
+            await refresh(saved.status === 'Borrador' ? await api.post(`/orders/${order.id}/sent`) : saved);
+            toast('Chat del proveedor abierto con el pedido.');
+          } else if (act === 'copy') {
+            const saved = await api.put(`/orders/${order.id}`, body());
+            await navigator.clipboard.writeText(saved.whatsAppText);
+            await refresh(saved);
+            toast('Pedido copiado: pégalo en el mensaje o correo al proveedor.');
+          } else if (act === 'sent') {
+            await refresh(await api.post(`/orders/${order.id}/sent`));
+          } else if (act === 'receive') {
+            await api.put(`/orders/${order.id}`, body());
+            location.href = `purchases.html#order=${order.id}`;
+          } else if (act === 'cancel') {
+            if (!await confirmBox(`Cancelar el pedido ${order.folio}.`, { okText: 'Cancelar pedido', danger: true })) return;
+            await refresh(await api.post(`/orders/${order.id}/cancel`));
+          }
+        } catch (err) { $('#od-error').textContent = err.message; $('#od-error').hidden = false; }
+      });
+      $('#od-save-tracking').addEventListener('click', async () => {
+        try { refreshSide(await api.put(`/orders/${order.id}/tracking`, { carrier: $('#od-carrier').value, trackingNumber: $('#od-tracking').value })); toast('Guía guardada.'); }
+        catch (err) { fail(err); }
+      });
+      $('#od-add-event').addEventListener('click', async () => {
+        try { refreshSide(await api.post(`/orders/${order.id}/events`, { text: $('#od-event').value })); $('#od-event').value = ''; }
+        catch (err) { fail(err); }
+      });
+      $('#new-manual').addEventListener('click', () => openOrder(null));
+
+      show(location.hash === '#orders' ? 'orders' : 'suggested');
+    });
+  </script>
+</body>
+</html>

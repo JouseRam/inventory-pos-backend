@@ -32,6 +32,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<InvoicingAccount> InvoicingAccounts => Set<InvoicingAccount>();
     public DbSet<Promotion> Promotions => Set<Promotion>();
     public DbSet<PromotionRecipient> PromotionRecipients => Set<PromotionRecipient>();
+    public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
+    public DbSet<PurchaseOrderItem> PurchaseOrderItems => Set<PurchaseOrderItem>();
+    public DbSet<PurchaseOrderEvent> PurchaseOrderEvents => Set<PurchaseOrderEvent>();
 
     // ── System ──
     public DbSet<Setting> Settings => Set<Setting>();

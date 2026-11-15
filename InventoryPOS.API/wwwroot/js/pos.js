@@ -185,7 +185,7 @@ POS.boot({ module: 'Sales', title: 'Punto de venta' }, async () => {
         <div class="controls">
           <span class="stepper">
             <button type="button" data-dec="${i}" aria-label="Quitar uno">−</button>
-            <input type="number" min="0.001" step="1" value="${l.qty}" data-qty="${i}" aria-label="Cantidad">
+            <input type="number" min="0.001" step="any" value="${l.qty}" data-qty="${i}" aria-label="Cantidad">
             <button type="button" data-inc="${i}" aria-label="Agregar uno">+</button>
           </span>
           × ${fmt.money(l.variant.price)}

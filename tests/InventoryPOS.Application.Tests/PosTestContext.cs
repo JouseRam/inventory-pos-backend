@@ -60,7 +60,8 @@ public sealed class PosTestContext : IDisposable
         Db.FolioSequences.AddRange(
             new FolioSequence { Name = FolioSeries.Sale, Prefix = "V-" },
             new FolioSequence { Name = FolioSeries.Purchase, Prefix = "REC-" },
-            new FolioSequence { Name = FolioSeries.CashSession, Prefix = "CJ-" });
+            new FolioSequence { Name = FolioSeries.CashSession, Prefix = "CJ-" },
+            new FolioSequence { Name = FolioSeries.PurchaseOrder, Prefix = "PED-" });
         Db.Settings.Add(new Setting { Key = SettingKeys.TaxRate, Value = "16", Label = "IVA", Type = "number" });
         Db.SaveChanges();
 

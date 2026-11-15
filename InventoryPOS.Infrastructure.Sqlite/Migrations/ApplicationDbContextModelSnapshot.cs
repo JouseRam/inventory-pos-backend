@@ -965,6 +965,163 @@ namespace InventoryPOS.Infrastructure.Sqlite.Migrations
                     b.ToTable("PurchaseItems", (string)null);
                 });
 
+            modelBuilder.Entity("InventoryPOS.Domain.Entities.PurchaseOrder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Carrier")
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Folio")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("PurchaseId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ReceivedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ShippedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("SupplierId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TrackingNumber")
+                        .HasMaxLength(60)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("Uid")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Folio")
+                        .IsUnique();
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("SupplierId");
+
+                    b.HasIndex("Uid")
+                        .IsUnique();
+
+                    b.ToTable("PurchaseOrders", (string)null);
+                });
+
+            modelBuilder.Entity("InventoryPOS.Domain.Entities.PurchaseOrderEvent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Manual")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PurchaseOrderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("Uid")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PurchaseOrderId");
+
+                    b.HasIndex("Uid")
+                        .IsUnique();
+
+                    b.ToTable("PurchaseOrderEvents", (string)null);
+                });
+
+            modelBuilder.Entity("InventoryPOS.Domain.Entities.PurchaseOrderItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PurchaseOrderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("Uid")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("UnitCost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("VariantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PurchaseOrderId");
+
+                    b.HasIndex("Uid")
+                        .IsUnique();
+
+                    b.HasIndex("VariantId");
+
+                    b.ToTable("PurchaseOrderItems", (string)null);
+                });
+
             modelBuilder.Entity("InventoryPOS.Domain.Entities.Sale", b =>
                 {
                     b.Property<int>("Id")
@@ -1790,6 +1947,46 @@ namespace InventoryPOS.Infrastructure.Sqlite.Migrations
                     b.Navigation("Variant");
                 });
 
+            modelBuilder.Entity("InventoryPOS.Domain.Entities.PurchaseOrder", b =>
+                {
+                    b.HasOne("InventoryPOS.Domain.Entities.Supplier", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Supplier");
+                });
+
+            modelBuilder.Entity("InventoryPOS.Domain.Entities.PurchaseOrderEvent", b =>
+                {
+                    b.HasOne("InventoryPOS.Domain.Entities.PurchaseOrder", "PurchaseOrder")
+                        .WithMany("Events")
+                        .HasForeignKey("PurchaseOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PurchaseOrder");
+                });
+
+            modelBuilder.Entity("InventoryPOS.Domain.Entities.PurchaseOrderItem", b =>
+                {
+                    b.HasOne("InventoryPOS.Domain.Entities.PurchaseOrder", "PurchaseOrder")
+                        .WithMany("Items")
+                        .HasForeignKey("PurchaseOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("InventoryPOS.Domain.Entities.ProductVariant", "Variant")
+                        .WithMany()
+                        .HasForeignKey("VariantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PurchaseOrder");
+
+                    b.Navigation("Variant");
+                });
+
             modelBuilder.Entity("InventoryPOS.Domain.Entities.Sale", b =>
                 {
                     b.HasOne("InventoryPOS.Domain.Entities.CashSession", "CashSession")
@@ -1939,6 +2136,13 @@ namespace InventoryPOS.Infrastructure.Sqlite.Migrations
 
             modelBuilder.Entity("InventoryPOS.Domain.Entities.Purchase", b =>
                 {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("InventoryPOS.Domain.Entities.PurchaseOrder", b =>
+                {
+                    b.Navigation("Events");
+
                     b.Navigation("Items");
                 });
 

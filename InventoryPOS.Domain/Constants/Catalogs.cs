@@ -65,6 +65,7 @@ public static class FolioSeries
     public const string Sale = "Sale";
     public const string Purchase = "Purchase";
     public const string CashSession = "CashSession";
+    public const string PurchaseOrder = "PurchaseOrder";
 }
 
 public static class InvoiceStatus
@@ -88,4 +89,15 @@ public static class PromotionRecipientStatus
     public const string Skipped = "Omitido";
 
     public static readonly string[] All = [Pending, Sent, Skipped];
+}
+
+public static class PurchaseOrderStatus
+{
+    public const string Draft = "Borrador";
+    public const string Sent = "Enviado";
+    public const string Shipped = "En camino";
+    public const string Received = "Recibido";
+    public const string Cancelled = "Cancelado";
+
+    public static readonly string[] All = [Draft, Sent, Shipped, Received, Cancelled];
 }

@@ -139,6 +139,19 @@ const SHOTS = [
   { name: 'labels-dialog', url: '/products.html', prepare: async p => {
       await p.locator('.prod', { hasText: 'Igora Royal' }).first().locator('[data-labels]').click(); await p.waitForTimeout(900); } },
   { name: 'inventory', url: '/inventory.html' },
+  { name: 'orders-suggested', url: '/orders.html', full: true },
+  { name: 'orders-detail', url: '/orders.html#orders', prepare: async p => {
+      // An order made from the suggestion, sent by WhatsApp, with its tracking number and a movement written by hand.
+      await p.evaluate(async () => {
+        if ((await POS.api.get('/orders')).length) return;
+        const group = (await POS.api.get('/orders/suggestions')).suppliers.find(g => g.hasWhatsApp);
+        const order = await POS.api.post('/orders', { supplierId: group.supplierId, notes: 'Entregar antes del viernes, por favor.',
+          items: group.lines.map(l => ({ variantId: l.variantId, quantity: l.suggestedQuantity, unitCost: l.unitCost })) });
+        await POS.api.post(`/orders/${order.id}/sent`);
+        await POS.api.put(`/orders/${order.id}/tracking`, { carrier: 'estafeta', trackingNumber: '6015 8890 2231 4471 0098' });
+        await POS.api.post(`/orders/${order.id}/events`, { text: 'Llegó al centro de distribución de Pachuca' });
+      });
+      await p.reload(); await p.waitForTimeout(1200); await p.click('#orders [data-id]'); await p.waitForTimeout(800); } },
   { name: 'purchases', url: '/purchases.html' },
   { name: 'catalogs', url: '/catalogs.html' },
   { name: 'customers', url: '/customers.html' },
@@ -167,6 +180,8 @@ const SHOTS = [
           await POS.api.put(`/promotions/${promo.id}/recipients/${full.recipients[0].id}`, { status: 'Enviado' }); });
         await p.reload(); await p.waitForTimeout(1500);
       } } },
+  { name: 'promotions-send', url: '/promotions.html', prepare: async p => {
+      await p.evaluate(() => document.querySelector('.send-modes')?.scrollIntoView({ block: 'start' })); await p.waitForTimeout(300); } },
   { name: 'dashboard', url: '/dashboard.html' },
   { name: 'reports', url: '/reports.html' },
   { name: 'settings-business', url: '/settings.html#business' },

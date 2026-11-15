@@ -105,12 +105,12 @@
 
       // ── Receive form ──
       const dlg = $('#receive-dialog');
-      function addLine() {
+      function addLine(item) {
         const row = document.createElement('div');
         row.className = 'rline';
         row.innerHTML = `
           <label class="field"><span>Presentación</span><input class="r-variant" required placeholder="Busca por nombre, tono o SKU"></label>
-          <label class="field"><span>Cantidad</span><input class="r-qty" type="number" min="0.001" step="1" required></label>
+          <label class="field"><span>Cantidad</span><input class="r-qty" type="number" min="0.001" step="any" required></label>
           <label class="field"><span>Costo unit.</span><input class="r-cost mono" type="number" min="0" step="0.01" required></label>
           <label class="field"><span>Lote</span><input class="r-lot mono" maxlength="50"></label>
           <label class="field"><span>Caducidad</span><input class="r-exp" type="date"></label>
@@ -126,13 +126,24 @@
         });
         row.addEventListener('input', total);
         $('#r-lines').appendChild(row);
+        // A line coming from a supplier order arrives with its product, quantity and expected cost.
+        if (item) {
+          row.variant = { id: item.variantId, cost: item.unitCost, tracksBatches: item.tracksBatches, displayName: item.description };
+          row.querySelector('.r-variant').value = item.description;
+          row.querySelector('.r-qty').value = item.quantity;
+          row.querySelector('.r-cost').value = item.unitCost;
+          row.querySelector('.r-lot').required = item.tracksBatches;
+          row.querySelector('.r-lot').placeholder = item.tracksBatches ? 'Requerido' : 'Opcional';
+        }
       }
       function total() {
         const t = $$('.rline', dlg).reduce((s, r) => s + (Number(r.querySelector('.r-qty').value) || 0) * (Number(r.querySelector('.r-cost').value) || 0), 0);
         $('#r-total').textContent = fmt.money(t);
       }
       $('#r-add').addEventListener('click', addLine);
+      let fromOrder = null;
       $('#new-btn').addEventListener('click', () => {
+        fromOrder = null;
         dlg.querySelector('form').reset();
         dlg.querySelector('.form-error').hidden = true;
         $('#r-lines').innerHTML = '';
@@ -160,6 +171,11 @@
             })),
           });
           toast(`Recepción ${p.folio} registrada. Imprime sus etiquetas.`);
+          if (fromOrder) {
+            await api.post(`/orders/${fromOrder.id}/received`, { purchaseId: p.id }).catch(POS.fail);
+            fromOrder = null;
+            history.replaceState(null, '', location.pathname);
+          }
           dlg.close();
           await load();
           await printLabels(p);
@@ -167,6 +183,22 @@
       });
 
       await load();
+
+      // purchases.html#order=12 opens the reception filled with that supplier order (from Pedidos → Recibir mercancía).
+      const orderId = Number((location.hash.match(/order=(\d+)/) || [])[1]);
+      if (orderId) {
+        try {
+          fromOrder = await api.get('/orders/' + orderId);
+          dlg.querySelector('form').reset();
+          dlg.querySelector('.form-error').hidden = true;
+          $('#r-lines').innerHTML = '';
+          $('#r-supplier').value = fromOrder.supplierId ?? '';
+          $('#r-notes').value = `Pedido ${fromOrder.folio}`;
+          fromOrder.items.forEach(addLine);
+          total();
+          dlg.showModal();
+        } catch (err) { POS.fail(err); }
+      }
     });
   </script>
 </body>

@@ -267,6 +267,7 @@
     { group: 'Inventario', items: [
       { href: 'products.html', label: 'Productos', icon: 'bi-palette2', module: 'Products' },
       { href: 'inventory.html', label: 'Existencias', icon: 'bi-box-seam', module: 'Inventory' },
+      { href: 'orders.html', label: 'Pedidos', icon: 'bi-cart-check', module: 'Purchases' },
       { href: 'purchases.html', label: 'Recepciones', icon: 'bi-truck', module: 'Purchases', register: true },
       { href: 'catalogs.html', label: 'Categorías y marcas', icon: 'bi-tags', module: 'Products' },
     ] },
