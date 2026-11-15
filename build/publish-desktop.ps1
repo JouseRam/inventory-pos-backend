@@ -7,6 +7,12 @@ param(
 $ErrorActionPreference = "Stop"
 $project = Join-Path $PSScriptRoot "..\InventoryPOS.Desktop\InventoryPOS.Desktop.csproj"
 
+# A register without the vendor's public key cannot be activated: stop before shipping it.
+$keyFile = Join-Path $PSScriptRoot "..\InventoryPOS.Desktop\LicensePublicKey.cs"
+if ((Get-Content $keyFile -Raw) -match 'Value = "";') {
+    throw "Falta la llave pública de licencias en InventoryPOS.Desktop\LicensePublicKey.cs. Créala con: dotnet run --project InventoryPOS.LicenseTool -- llaves"
+}
+
 if (Test-Path $Output) { Remove-Item -Recurse -Force $Output }
 
 dotnet publish $project -c Release -r win-x64 --self-contained true -o $Output -p:DebugType=None -p:DebugSymbols=false
@@ -19,3 +25,4 @@ $size = "{0:N0} MB" -f ((Get-ChildItem $Output -Recurse | Measure-Object Length 
 Write-Host ""
 Write-Host "Listo: $Output ($size)"
 Write-Host "Copia la carpeta a la caja y abre MatizPOS.exe. Los datos quedan en %LOCALAPPDATA%\MatizPOS."
+Write-Host "La primera vez pedirá activación: genera la clave con  dotnet run --project InventoryPOS.LicenseTool -- activar --codigo <código> --cliente \"<nombre>\""

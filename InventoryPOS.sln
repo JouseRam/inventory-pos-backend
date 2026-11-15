@@ -19,6 +19,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryPOS.Infrastructure
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryPOS.Desktop", "InventoryPOS.Desktop\InventoryPOS.Desktop.csproj", "{35B0E73F-9F0E-4C5C-9B76-8BEE60CBF007}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryPOS.Licensing", "InventoryPOS.Licensing\InventoryPOS.Licensing.csproj", "{EFB90B3E-32EB-44EE-8A39-465393655D37}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryPOS.LicenseTool", "InventoryPOS.LicenseTool\InventoryPOS.LicenseTool.csproj", "{7CF3ABA4-C33B-4B1E-8BD9-245ECE16FE4D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -56,6 +60,14 @@ Global
 		{35B0E73F-9F0E-4C5C-9B76-8BEE60CBF007}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{35B0E73F-9F0E-4C5C-9B76-8BEE60CBF007}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{35B0E73F-9F0E-4C5C-9B76-8BEE60CBF007}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EFB90B3E-32EB-44EE-8A39-465393655D37}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EFB90B3E-32EB-44EE-8A39-465393655D37}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EFB90B3E-32EB-44EE-8A39-465393655D37}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EFB90B3E-32EB-44EE-8A39-465393655D37}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7CF3ABA4-C33B-4B1E-8BD9-245ECE16FE4D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7CF3ABA4-C33B-4B1E-8BD9-245ECE16FE4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7CF3ABA4-C33B-4B1E-8BD9-245ECE16FE4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7CF3ABA4-C33B-4B1E-8BD9-245ECE16FE4D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{B68C84D8-7471-4412-A188-0D4617500459} = {1D275BAB-FBB0-4B15-BEE2-495476BDAE9C}

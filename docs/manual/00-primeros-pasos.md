@@ -16,6 +16,15 @@ Anna’s Beauty Supply POS es el sistema de punto de venta e inventario de la ti
 
 Si la tienda tiene una sola computadora y no usa la web, la caja hace todo.
 
+## Activar la caja (solo la primera vez)
+
+El programa de escritorio se activa para **una sola computadora**. La primera vez que se abre aparece **Esta computadora necesita activarse** con un **código de equipo** (por ejemplo `0A3F-…`):
+
+1. Pulsa **Copiar código** y envíalo a tu proveedor del sistema.
+2. Él te manda una **clave de activación**. Pégala en el recuadro (o pulsa **Cargar desde archivo…**) y pulsa **Activar**.
+
+La clave solo sirve en esa computadora: si el programa se copia a otra, pedirá una clave nueva. Reinstalar Windows en la misma computadora no la pierde; si cambias de computadora, pide una nueva activación.
+
 ## Entrar al sistema
 
 ![Pantalla de inicio de sesión](shot:login)

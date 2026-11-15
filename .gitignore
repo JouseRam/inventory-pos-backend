@@ -68,3 +68,7 @@ App_Data/
 # Manuales: dependencias y capturas temporales
 build/manuals/node_modules/
 build/manuals/out/
+
+# Vendor private key for activation keys: never in the repository.
+llave-privada-licencias*.txt
+*.licencia-privada

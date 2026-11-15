@@ -62,3 +62,32 @@ npm run manuals
 ```
 
 Usa una base de datos vacía: el script crea un administrador de demostración y datos de ejemplo.
+
+## Licencias: una activación por computadora
+
+La caja de escritorio solo abre en la computadora para la que se activó. La primera vez muestra un **código de equipo**
+(sacado del identificador de Windows, el UUID y el número de serie de la tarjeta madre); el distribuidor genera con ese
+código una **clave de activación** firmada con su llave privada. Si se copia el programa o su carpeta de datos a otra
+computadora, el código cambia y vuelve a pedir activación. Reinstalar Windows o cambiar una pieza no la invalida
+(basta con que coincidan 2 de los 3 datos); cambiar de computadora sí.
+
+**Una sola vez**, en tu computadora (no en la del cliente):
+
+```
+dotnet run --project InventoryPOS.LicenseTool -- llaves
+```
+
+Crea `llave-privada-licencias.txt` (guárdala con respaldo y **nunca** la subas al repositorio; `.gitignore` ya la
+excluye) e imprime la llave pública: pégala en `InventoryPOS.Desktop/LicensePublicKey.cs`. `build/publish-desktop.ps1`
+no publica sin ella. Si pierdes la llave privada tendrás que crear otra, publicar de nuevo y reactivar todas las cajas.
+
+**Por cada computadora** que te envíen su código:
+
+```
+dotnet run --project InventoryPOS.LicenseTool -- activar --codigo XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX --cliente "Anna’s Beauty Supply" --salida clave.txt
+```
+
+Opcional: `--vence AAAA-MM-DD` para una licencia con fecha de vencimiento. Manda la clave (texto o archivo) al cliente;
+la pega o carga en la pantalla de activación. La clave queda en `%LOCALAPPDATA%\MatizPOS\licencia.key`.
+
+Al depurar desde Visual Studio (Debug) no se pide activación; para probarla define la variable `MATIZPOS_LICENSE=1`.

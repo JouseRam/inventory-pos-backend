@@ -34,6 +34,8 @@ internal static class Program
             .AddJsonFile(SettingsFile, optional: true)
             .Build();
         var paths = DesktopPaths.Resolve(baseConfig);
+        // Only on the computer it was activated for (see LicenseGate).
+        if (!LicenseGate.Ensure(paths)) return;
         var logs = new FileLoggerProvider(paths.Logs);
         logs.PruneOldFiles();
         var port = PickPort(baseConfig.GetValue("Desktop:PreferredPort", 51080));
