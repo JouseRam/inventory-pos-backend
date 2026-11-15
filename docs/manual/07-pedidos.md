@@ -69,6 +69,24 @@ Cuando llegue el paquete, pulsa **Recibir mercancía** en el pedido. Se abre **R
 
 En la pestaña **Pedidos y rastreo** están todos los pedidos con su estado, total estimado y guía. Filtra por **Estado** y haz clic en uno para abrirlo.
 
+## Compras por proveedor (para negociar)
+
+![Compras por proveedor](shot:orders-stats)
+
+La pestaña **Compras por proveedor** muestra, para el **Periodo** que elijas (3 meses, 6 meses, 1 año o 2 años), lo que entró por **Recepciones** de cada proveedor:
+
+| Columna | Qué te dice |
+|---|---|
+| **Comprado** y **% de tus compras** | Cuánto dinero le has comprado y qué parte de todo lo que compras representa. |
+| **Compras** y **Frecuencia** | Cuántas veces le compraste y cada cuántos días en promedio. |
+| **Promedio al mes** | Lo que le compras al mes desde tu primera compra del periodo. |
+| **Piezas** y **Última compra** | El volumen total y cuándo fue la más reciente. |
+| **Entrega** | Días promedio entre que le mandaste el pedido y lo recibiste. |
+
+Haz clic en un proveedor para ver sus **compras por mes**, los **productos que le compras** (piezas, dinero, veces y cómo cambió su costo en el periodo) y una **propuesta para negociar** ya escrita con tus números: cuánto le has comprado, cada cuánto y tus productos principales, pidiéndole **descuento por volumen, mejores precios o producto de regalo**. Edítala y pulsa **Enviar por WhatsApp** o **Copiar**.
+
+> Si un producto subió de costo (marcado en amarillo), es buen argumento para pedir que te respeten el precio anterior. También puedes ir a la pestaña desde **Proveedores › Ver cuánto le compras a cada proveedor**.
+
 ## Permisos
 
 Pedidos usa el permiso del módulo **Recepciones**: **Ver** muestra las sugerencias y los pedidos; **Editar** permite crearlos, enviarlos, capturar la guía y recibirlos.

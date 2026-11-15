@@ -120,6 +120,39 @@ public class PurchaseOrderTests
     }
 
     [Fact]
+    public async Task Supplier_stats_show_how_much_and_how_often_was_bought_and_a_message_to_negotiate()
+    {
+        using var s = new Setup();
+        var (fast, _, low) = await s.CatalogAsync(); // 63 pieces at $50 = $3,150 from Distribuidora Bella
+        await s.Pos.Purchases.ReceiveAsync(new InventoryPOS.Application.Features.Inventory.PurchaseCreateDto(s.SupplierId, null, null,
+            [new(fast, 10, 55, null, null)]));
+        await s.Pos.Purchases.ReceiveAsync(new InventoryPOS.Application.Features.Inventory.PurchaseCreateDto(null, null, null,
+            [new(low, 5, 40, null, null)]));
+        var stats = new SupplierStatsService(s.Pos.Uow, new DateTimeProvider(TimeZoneInfo.Utc),
+            new SettingService(s.Pos.Uow, new PosGuard(s.Pos.Env)));
+
+        var all = await stats.GetAsync(365);
+
+        Assert.Equal(3700 + 200, all.Total);
+        var bella = all.Suppliers[0];
+        Assert.Equal(s.SupplierId, bella.SupplierId);
+        Assert.Equal(3700, bella.Total);
+        Assert.Equal(2, bella.Receptions);
+        Assert.Equal(73, bella.Pieces);
+        Assert.Equal(94.9m, bella.SharePercent);
+        Assert.Equal("Sin proveedor", all.Suppliers[1].SupplierName);
+
+        var detail = await stats.GetSupplierAsync(s.SupplierId, 365);
+        var dye = detail.Products.Single(p => p.VariantId == fast);
+        Assert.Equal(50, dye.Pieces);
+        Assert.Equal((50, 55, 10m), (dye.FirstCost, dye.LastCost, dye.CostChangePercent));
+        Assert.InRange(detail.Months.Count, 12, 13); // 365 days touch 12 or 13 calendar months
+        Assert.Equal("5541203311", detail.WhatsAppPhone);
+        Assert.Contains("$3,700.00 en 2 compras", detail.NegotiationText);
+        Assert.Contains("descuento", detail.NegotiationText);
+    }
+
+    [Fact]
     public void Carriers_without_a_public_link_use_the_universal_tracker()
     {
         Assert.Equal("https://t.17track.net/es#nums=EST123", Carriers.TrackingUrl("estafeta", "EST123"));

@@ -152,6 +152,7 @@ const SHOTS = [
         await POS.api.post(`/orders/${order.id}/events`, { text: 'Llegó al centro de distribución de Pachuca' });
       });
       await p.reload(); await p.waitForTimeout(1200); await p.click('#orders [data-id]'); await p.waitForTimeout(800); } },
+  { name: 'orders-stats', url: '/orders.html#stats', prepare: async p => { await p.click('#stats [data-sid]'); await p.waitForTimeout(900); } },
   { name: 'purchases', url: '/purchases.html' },
   { name: 'catalogs', url: '/catalogs.html' },
   { name: 'customers', url: '/customers.html' },

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-15T02:14:21.322Z",
+  "generatedAt": "2026-11-15T02:34:07.417Z",
   "manuals": [
     {
       "slug": "primeros-pasos",
@@ -26,7 +26,7 @@
       "icon": "bi-cash-coin",
       "summary": "Abrir la caja con su fondo, registrar entradas y retiros de efectivo y hacer el corte al final del turno.",
       "file": "02-caja.pdf",
-      "size": 262607
+      "size": 262640
     },
     {
       "slug": "ventas",
@@ -35,7 +35,7 @@
       "icon": "bi-receipt-cutoff",
       "summary": "Consultar el historial de ventas, ver el detalle de un ticket, reimprimirlo, cancelarlo o facturarlo.",
       "file": "03-ventas.pdf",
-      "size": 338507
+      "size": 339076
     },
     {
       "slug": "facturacion",
@@ -44,7 +44,7 @@
       "icon": "bi-receipt",
       "summary": "Timbrar facturas CFDI 4.0 desde la caja, descargarlas, cancelarlas y configurar, pagar o cambiar el proveedor.",
       "file": "04-facturacion.pdf",
-      "size": 586251
+      "size": 586420
     },
     {
       "slug": "productos",
@@ -71,7 +71,7 @@
       "icon": "bi-cart-check",
       "summary": "Pedir a cada proveedor lo que hace falta con la lista sugerida por el sistema, enviarla por WhatsApp y rastrear el envío.",
       "file": "07-pedidos.pdf",
-      "size": 485493
+      "size": 649671
     },
     {
       "slug": "recepciones",
@@ -80,7 +80,7 @@
       "icon": "bi-truck",
       "summary": "Capturar la mercancía que llega del proveedor con su costo, lote y caducidad.",
       "file": "08-recepciones.pdf",
-      "size": 190821
+      "size": 191213
     },
     {
       "slug": "etiquetas-y-escaner",
@@ -89,7 +89,7 @@
       "icon": "bi-qr-code",
       "summary": "Imprimir etiquetas con QR o código de barras en hojas carta y cobrar escaneándolas.",
       "file": "09-etiquetas-y-escaner.pdf",
-      "size": 359078
+      "size": 359196
     },
     {
       "slug": "categorias-y-marcas",
@@ -116,7 +116,7 @@
       "icon": "bi-building",
       "summary": "Registrar a los proveedores para asignarlos a los productos y a las recepciones.",
       "file": "12-proveedores.pdf",
-      "size": 163545
+      "size": 172747
     },
     {
       "slug": "promociones",
@@ -125,7 +125,7 @@
       "icon": "bi-megaphone",
       "summary": "Crear una promoción con imagen y slogan, elegir a qué clientes enviarla y mandarla por WhatsApp.",
       "file": "13-promociones.pdf",
-      "size": 473282
+      "size": 473176
     },
     {
       "slug": "resumen-del-dia",
@@ -161,7 +161,7 @@
       "icon": "bi-journal-text",
       "summary": "Dónde encontrar, leer y descargar estos manuales desde el sistema.",
       "file": "17-documentacion.pdf",
-      "size": 286337
+      "size": 286190
     },
     {
       "slug": "completo",
@@ -170,7 +170,7 @@
       "icon": "bi-book",
       "summary": "Todos los manuales en un solo documento, con índice.",
       "file": "manual-completo.pdf",
-      "size": 4571613,
+      "size": 4733957,
       "complete": true
     }
   ]

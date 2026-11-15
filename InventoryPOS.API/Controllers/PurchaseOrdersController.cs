@@ -9,8 +9,17 @@ namespace InventoryPOS.API.Controllers;
 [ApiController]
 [Route("api/orders")]
 [RequireModule(PosModules.Purchases)]
-public class PurchaseOrdersController(PurchaseOrderService service) : ControllerBase
+public class PurchaseOrdersController(PurchaseOrderService service, SupplierStatsService stats) : ControllerBase
 {
+    /// <summary>How much was bought from each supplier in the last <paramref name="days"/> days and how often.</summary>
+    [HttpGet("supplier-stats")]
+    public Task<SupplierStatsDto> SupplierStats([FromQuery] int days = 365, CancellationToken ct = default) => stats.GetAsync(days, ct);
+
+    /// <summary>One supplier: months, products with their cost change, and a message to ask for better terms.</summary>
+    [HttpGet("supplier-stats/{supplierId:int}")]
+    public Task<SupplierStatsDetailDto> SupplierStatsDetail(int supplierId, [FromQuery] int days = 365, CancellationToken ct = default) =>
+        stats.GetSupplierAsync(supplierId, days, ct);
+
     /// <summary>What to reorder per supplier, from stock, minimums and the sales of the last <paramref name="days"/> days.</summary>
     [HttpGet("suggestions")]
     public Task<SuggestionsDto> Suggestions([FromQuery] int days = 30, [FromQuery] int coverDays = 30, CancellationToken ct = default) =>

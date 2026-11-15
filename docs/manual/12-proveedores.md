@@ -16,4 +16,6 @@ Los proveedores se usan:
 
 > Registra el **Teléfono** de 10 dígitos (el de WhatsApp del proveedor) para poder mandarle los pedidos con un clic desde **Pedidos**.
 
+Para ver **cuánto le has comprado a cada proveedor y cada cuánto**, y mandarle una propuesta para negociar descuentos o producto de regalo, pulsa **Ver cuánto le compras a cada proveedor** (lo explica el manual de **Pedidos**).
+
 Un proveedor con historial se **desactiva** en lugar de borrarse. Activa **Mostrar inactivos** para verlo.

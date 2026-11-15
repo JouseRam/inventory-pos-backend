@@ -32,6 +32,10 @@
           <label class="field span-all"><span>Dirección</span><input name="address" maxlength="300"></label>`,
         deleteText: r => `Desactivar a ${r.name}. Sus recepciones anteriores se conservan.`,
       }).load();
+      // How much and how often each supplier was bought from lives with the orders (same permission as receptions).
+      if (session.can('Purchases'))
+        document.querySelector('#crud').insertAdjacentHTML('afterbegin',
+          '<a class="btn" href="orders.html#stats" style="justify-self:start;margin-bottom:12px;text-decoration:none"><i class="bi bi-graph-up"></i>Ver cuánto le compras a cada proveedor</a>');
     });
   </script>
 </body>

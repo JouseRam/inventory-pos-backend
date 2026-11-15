@@ -392,3 +392,14 @@ dialog.labels-dialog { width: min(1040px, calc(100vw - 32px)); }
 .timeline li::before { content: ''; position: absolute; left: -20px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
 .timeline li.manual::before { background: var(--warn); }
 .timeline time { color: var(--muted); font-size: .78rem; }
+
+/* ── Purchases per supplier ── */
+.stat-inline { display: grid; text-align: right; font-size: .85rem; }
+.stat-inline b { font: 700 1.25rem var(--font-display, inherit); color: var(--ink); }
+.share { height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; margin-bottom: 2px; }
+.share span { display: block; height: 100%; background: var(--accent); }
+.sd-h { margin: 0 0 8px; font-size: .95rem; display: flex; gap: 6px; align-items: center; }
+.month-bars { display: flex; gap: 6px; align-items: flex-end; height: 140px; overflow-x: auto; padding-bottom: 2px; }
+.month-bars .mb { flex: 1 0 34px; display: grid; grid-template-rows: 1fr auto; height: 100%; text-align: center; }
+.month-bars .mb > span { align-self: end; display: block; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 2px; }
+.month-bars small { font-size: .7rem; color: var(--muted); padding-top: 4px; white-space: nowrap; }

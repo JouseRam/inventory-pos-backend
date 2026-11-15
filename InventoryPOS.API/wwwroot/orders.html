@@ -13,6 +13,7 @@
     <div class="tabs" role="tablist">
       <button role="tab" aria-selected="true" data-tab="suggested">Sugeridos</button>
       <button role="tab" aria-selected="false" data-tab="orders">Pedidos y rastreo</button>
+      <button role="tab" aria-selected="false" data-tab="stats">Compras por proveedor</button>
     </div>
 
     <!-- ── Suggested orders per supplier ── -->
@@ -37,6 +38,42 @@
         <thead><tr><th>Folio</th><th>Proveedor</th><th>Fecha</th><th>Estado</th><th class="num">Productos</th><th class="num">Estimado</th><th>Guía</th></tr></thead>
         <tbody id="orders"></tbody></table></div></section>
     </section>
+
+    <!-- ── Purchases per supplier: how much and how often, to negotiate ── -->
+    <section data-panel="stats" hidden style="display:grid;gap:16px">
+      <div class="toolbar">
+        <label class="field"><span>Periodo</span><select id="st-days"><option value="90">Últimos 3 meses</option><option value="180">Últimos 6 meses</option><option value="365" selected>Último año</option><option value="730">Últimos 2 años</option></select></label>
+        <span class="grow"></span>
+        <div class="stat-inline"><span class="muted">Total comprado</span><b id="st-total"></b></div>
+      </div>
+      <p class="muted" style="margin:0;font-size:.88rem">Lo que entró por <b>Recepciones</b> de cada proveedor. Úsalo para negociar: a quien más le compras y con más frecuencia
+        es a quien puedes pedirle descuento por volumen o producto de regalo. Haz clic en un proveedor para ver sus productos y mandarle la propuesta.</p>
+      <section class="panel"><div class="table-wrap"><table>
+        <thead><tr><th>Proveedor</th><th class="num">Comprado</th><th style="min-width:120px">% de tus compras</th><th class="num">Compras</th><th class="num">Frecuencia</th>
+          <th class="num">Promedio al mes</th><th class="num">Piezas</th><th>Última compra</th><th class="num">Entrega</th></tr></thead>
+        <tbody id="stats"></tbody></table></div></section>
+    </section>
+
+    <dialog id="stat-dialog" aria-labelledby="stat-title" style="width:min(980px,calc(100vw - 32px))">
+      <form method="dialog">
+        <header><h2 id="stat-title">Proveedor</h2><button class="btn ghost icon-btn" value="cancel" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button></header>
+        <div class="body" style="display:grid;gap:18px">
+          <div class="stats" id="sd-kpis"></div>
+          <section><h3 class="sd-h">Compras por mes</h3><div class="month-bars" id="sd-months"></div></section>
+          <section><h3 class="sd-h">Productos que le compras</h3>
+            <div class="table-wrap"><table><thead><tr><th>Producto</th><th class="num">Piezas</th><th class="num">Comprado</th><th class="num">Veces</th><th class="num">Costo antes → ahora</th><th class="num">Cambio</th></tr></thead>
+              <tbody id="sd-products"></tbody></table></div></section>
+          <section><h3 class="sd-h"><i class="bi bi-chat-dots"></i> Propuesta para negociar</h3>
+            <p class="muted" style="margin:0 0 6px;font-size:.85rem">Ya trae tus números. Edítala como quieras antes de mandarla.</p>
+            <textarea id="sd-text" rows="5" maxlength="1500" style="width:100%"></textarea>
+            <div class="order-actions" style="margin-top:8px">
+              <button class="btn primary" type="button" id="sd-wa"><i class="bi bi-whatsapp"></i>Enviar por WhatsApp</button>
+              <button class="btn" type="button" id="sd-copy"><i class="bi bi-clipboard"></i>Copiar</button>
+              <span class="muted" id="sd-nowa" style="font-size:.85rem" hidden>Registra su teléfono de 10 dígitos en Proveedores para mandarlo por WhatsApp.</span>
+            </div></section>
+        </div>
+      </form>
+    </dialog>
 
     <!-- ── One order: list, sending, tracking ── -->
     <dialog id="order-dialog" aria-labelledby="order-title" style="width:min(980px,calc(100vw - 32px))">
@@ -101,7 +138,7 @@
         $$('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
         $$('[data-panel]').forEach(p => { p.hidden = p.dataset.panel !== tab; });
         history.replaceState(null, '', '#' + tab);
-        (tab === 'orders' ? loadOrders : loadSuggestions)().catch(fail);
+        ({ suggested: loadSuggestions, orders: loadOrders, stats: loadStats })[tab]().catch(fail);
       }
       $$('[data-tab]').forEach(b => b.addEventListener('click', () => show(b.dataset.tab)));
 
@@ -303,7 +340,56 @@
       });
       $('#new-manual').addEventListener('click', () => openOrder(null));
 
-      show(location.hash === '#orders' ? 'orders' : 'suggested');
+      // ── Purchases per supplier ──
+      const monthName = (y, m) => new Date(y, m - 1, 1).toLocaleDateString('es-MX', { month: 'short', year: '2-digit' });
+      async function loadStats() {
+        try {
+          const st = await api.get('/orders/supplier-stats?days=' + $('#st-days').value);
+          $('#st-total').textContent = fmt.money(st.total);
+          $('#stats').innerHTML = st.suppliers.length ? st.suppliers.map(r => `
+            <tr class="${r.supplierId ? 'clickable' : ''}" ${r.supplierId ? `data-sid="${r.supplierId}"` : ''}>
+              <td><b>${esc(r.supplierName)}</b></td><td class="num">${fmt.money(r.total)}</td>
+              <td><div class="share"><span style="width:${Math.min(100, r.sharePercent)}%"></span></div><small>${r.sharePercent}%</small></td>
+              <td class="num">${r.receptions}</td>
+              <td class="num">${r.everyDays != null ? `cada ${r.everyDays} días` : '<span class="muted">—</span>'}</td>
+              <td class="num">${fmt.money(r.monthlyAverage)}</td><td class="num">${fmt.qty(r.pieces)}</td>
+              <td>${fmt.date(r.lastPurchase)}</td>
+              <td class="num">${r.deliveryDays != null ? `${r.deliveryDays} días` : '<span class="muted">—</span>'}</td></tr>`).join('')
+            : '<tr><td colspan="9" class="empty">Aún no hay recepciones en este periodo.</td></tr>';
+        } catch (err) { fail(err); }
+      }
+      $('#st-days').addEventListener('change', loadStats);
+      let detail = null;
+      $('#stats').addEventListener('click', async e => {
+        const row = e.target.closest('[data-sid]');
+        if (!row) return;
+        try { detail = await api.get(`/orders/supplier-stats/${row.dataset.sid}?days=${$('#st-days').value}`); } catch (err) { fail(err); return; }
+        const s = detail.summary;
+        $('#stat-title').textContent = s.supplierName;
+        const kpi = (label, value) => `<div class="panel stat"><div class="eyebrow">${label}</div><div class="value" style="font-size:1.3rem">${value}</div></div>`;
+        $('#sd-kpis').innerHTML = kpi('Comprado', fmt.money(s.total)) + kpi('De tus compras', s.sharePercent + '%')
+          + kpi('Compras', `${s.receptions}${s.everyDays != null ? ` · cada ${s.everyDays} días` : ''}`) + kpi('Promedio al mes', fmt.money(s.monthlyAverage))
+          + kpi('Entrega promedio', s.deliveryDays != null ? `${s.deliveryDays} días` : '—');
+        const max = Math.max(1, ...detail.months.map(m => m.total));
+        $('#sd-months').innerHTML = detail.months.map(m => `<div class="mb" title="${monthName(m.year, m.month)}: ${fmt.money(m.total)} en ${m.receptions} compra(s)">
+          <span style="height:${Math.round(m.total / max * 100)}%"></span><small>${monthName(m.year, m.month)}</small></div>`).join('');
+        $('#sd-products').innerHTML = detail.products.map(p => `<tr><td>${esc(p.description)}<br><small class="muted mono">${esc(p.sku || '')}</small></td>
+          <td class="num">${fmt.qty(p.pieces)}</td><td class="num">${fmt.money(p.total)}</td><td class="num">${p.times}</td>
+          <td class="num">${fmt.money(p.firstCost)} → ${fmt.money(p.lastCost)}</td>
+          <td class="num">${p.costChangePercent ? `<span class="pill ${p.costChangePercent > 0 ? 'warn' : 'good'}">${p.costChangePercent > 0 ? '+' : ''}${p.costChangePercent}%</span>` : '<span class="muted">igual</span>'}</td></tr>`).join('')
+          || '<tr><td colspan="6" class="empty">Sin compras en este periodo.</td></tr>';
+        $('#sd-text').value = detail.negotiationText;
+        $('#sd-wa').hidden = !detail.whatsAppPhone;
+        $('#sd-nowa').hidden = !!detail.whatsAppPhone;
+        $('#stat-dialog').showModal();
+      });
+      $('#sd-wa').addEventListener('click', () =>
+        window.open(`https://wa.me/52${detail.whatsAppPhone}?text=${encodeURIComponent($('#sd-text').value)}`, '_blank', 'noopener'));
+      $('#sd-copy').addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText($('#sd-text').value); toast('Propuesta copiada.'); } catch (err) { fail(err); }
+      });
+
+      show(({ '#orders': 'orders', '#stats': 'stats' })[location.hash] ?? 'suggested');
     });
   </script>
 </body>
