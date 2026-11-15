@@ -876,6 +876,9 @@ namespace InventoryPOS.Infrastructure.Sqlite.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("PurchaseOrderId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int?>("SupplierId")
                         .HasColumnType("INTEGER");
 
@@ -899,6 +902,8 @@ namespace InventoryPOS.Infrastructure.Sqlite.Migrations
 
                     b.HasIndex("Folio")
                         .IsUnique();
+
+                    b.HasIndex("PurchaseOrderId");
 
                     b.HasIndex("SupplierId");
 
@@ -1094,6 +1099,10 @@ namespace InventoryPOS.Infrastructure.Sqlite.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("ReceivedQuantity")
                         .HasPrecision(18, 3)
                         .HasColumnType("TEXT");
 

@@ -93,6 +93,7 @@ public class PurchaseConfiguration : IEntityTypeConfiguration<Purchase>
         e.HasOne(x => x.Supplier).WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.SetNull);
         e.HasIndex(x => x.Folio).IsUnique();
         e.HasIndex(x => x.CreatedAt);
+        e.HasIndex(x => x.PurchaseOrderId);
     }
 }
 

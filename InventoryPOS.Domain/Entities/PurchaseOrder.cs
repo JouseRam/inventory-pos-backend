@@ -15,7 +15,7 @@ public class PurchaseOrder : BaseEntity
     public string? TrackingNumber { get; set; }
     public DateTime? ShippedAt { get; set; }
     public DateTime? ReceivedAt { get; set; }
-    /// <summary>The reception that brought the goods in.</summary>
+    /// <summary>The last reception that brought goods in (an order may arrive in several).</summary>
     public int? PurchaseId { get; set; }
     public string? UserId { get; set; }
 
@@ -33,6 +33,8 @@ public class PurchaseOrderItem : BaseEntity
     public decimal Quantity { get; set; }
     /// <summary>Expected cost per piece (the last one paid), to estimate the order's amount.</summary>
     public decimal UnitCost { get; set; }
+    /// <summary>Pieces that already arrived in receptions linked to the order.</summary>
+    public decimal ReceivedQuantity { get; set; }
 
     public PurchaseOrder PurchaseOrder { get; set; } = null!;
     public ProductVariant Variant { get; set; } = null!;

@@ -152,6 +152,12 @@ const SHOTS = [
         await POS.api.post(`/orders/${order.id}/events`, { text: 'Llegó al centro de distribución de Pachuca' });
       });
       await p.reload(); await p.waitForTimeout(1200); await p.click('#orders [data-id]'); await p.waitForTimeout(800); } },
+  { name: 'order-receive', url: '/orders.html', prepare: async p => {
+      // The order from orders-detail arrives with two pieces short in its first product.
+      const id = await p.evaluate(async () => (await POS.api.get('/orders'))[0].id);
+      await p.goto(new URL('/purchases.html#order=' + id, p.url()).href); await p.waitForTimeout(1500);
+      const qty = p.locator('#r-lines .r-qty').first();
+      await qty.fill(String(Math.max(0, Number(await qty.inputValue()) - 2))); await qty.dispatchEvent('input'); await p.waitForTimeout(300); } },
   { name: 'orders-stats', url: '/orders.html#stats', prepare: async p => { await p.click('#stats [data-sid]'); await p.waitForTimeout(900); } },
   { name: 'bell', url: '/inventory.html', prepare: async p => { await p.click('#bell-btn'); await p.waitForTimeout(400); } },
   { name: 'purchases', url: '/purchases.html' },

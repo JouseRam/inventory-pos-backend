@@ -22,7 +22,7 @@ La lista muestra cada recepción con su folio, fecha, proveedor, factura o remis
 
 Las existencias suben al momento y el costo de la presentación se actualiza. Cada lote nuevo recibe su **ID** y se abre la impresión de **etiquetas**, una por pieza recibida. Para reimprimirlas, abre la recepción y pulsa **Imprimir etiquetas**.
 
-> Si la mercancía viene de un **pedido**, ábrelo en **Pedidos** y pulsa **Recibir mercancía**: la recepción se abre ya llena con el proveedor, los productos, las cantidades y los costos, y al registrarla el pedido queda como **Recibido**.
+> Si la mercancía viene de un **pedido**, ábrelo en **Pedidos** y pulsa **Recibir mercancía**: la recepción se abre con lo pedido para que captures en **Llegó** lo que de verdad vino. El sistema compara contra el pedido y lo deja **Recibido** si llegó completo o **Recibido parcial** si faltó algo (ver el manual de **Pedidos**).
 
 > Si un mismo tono llega en dos lotes con distinta caducidad, captura **un renglón por lote**.
 

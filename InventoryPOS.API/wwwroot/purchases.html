@@ -10,6 +10,12 @@
   <style>
     .rline { display: grid; grid-template-columns: minmax(200px, 2fr) 90px 110px 130px 150px 32px; gap: 8px; align-items: end; }
     @media (max-width: 760px) { .rline { grid-template-columns: 1fr 1fr; } .rline > :first-child { grid-column: 1 / -1; } }
+    .r-vs { font-size: .75rem; font-weight: 600; white-space: nowrap; }
+    .r-vs.ok { color: var(--good); } .r-vs.short { color: var(--crit); } .r-vs.extra { color: var(--warn); }
+    .r-order { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; background: var(--surface-2); }
+    .r-order-status { font-size: .9rem; }
+    .r-order-status.ok { color: var(--good); font-weight: 600; } .r-order-status.short { color: var(--crit); }
+    .r-order-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   </style>
 </head>
 <body>
@@ -35,6 +41,16 @@
             <label class="field"><span>Factura o remisión</span><input id="r-invoice" maxlength="50" class="mono"></label>
             <label class="field"><span>Notas</span><input id="r-notes" maxlength="500"></label>
           </div>
+          <section class="r-order" id="r-order" hidden>
+            <div><b id="r-order-title"></b><br><span class="muted" style="font-size:.88rem">Cuenta lo que viene en la caja y captúralo en <b>Llegó</b>. Lo que no llegó déjalo en 0.</span></div>
+            <div class="r-order-actions">
+              <button class="btn sm" type="button" id="r-all"><i class="bi bi-check2-all"></i>Llegó todo completo</button>
+              <button class="btn sm ghost" type="button" id="r-none">Poner todo en 0</button>
+            </div>
+            <div class="r-order-status" id="r-order-status" role="status"></div>
+            <label id="r-close-wrap" hidden style="display:inline-flex;gap:6px;align-items:center;font-size:.88rem"><input type="checkbox" id="r-close">
+              Cerrar el pedido con lo que llegó (ya no esperar lo que falta)</label>
+          </section>
           <div style="display:grid;gap:10px" id="r-lines"></div>
           <div style="display:flex;justify-content:space-between;align-items:center">
             <button class="btn sm" type="button" id="r-add"><i class="bi bi-plus"></i>Agregar renglón</button>
@@ -124,18 +140,56 @@
           row.querySelector('.r-lot').placeholder = v.tracksBatches ? 'Requerido' : 'Opcional';
           row.querySelector('.r-qty').focus();
         });
-        row.addEventListener('input', total);
+        row.addEventListener('input', () => { total(); compare(); });
         $('#r-lines').appendChild(row);
-        // A line coming from a supplier order arrives with its product, quantity and expected cost.
+        // A line coming from a supplier order arrives with its product, the pieces still expected and their cost.
         if (item) {
           row.variant = { id: item.variantId, cost: item.unitCost, tracksBatches: item.tracksBatches, displayName: item.description };
+          row.ordered = item.pending;
           row.querySelector('.r-variant').value = item.description;
-          row.querySelector('.r-qty').value = item.quantity;
+          const qty = row.querySelector('.r-qty');
+          qty.value = item.pending;
+          qty.min = '0';
+          qty.closest('label').querySelector('span').textContent = 'Llegó';
+          qty.insertAdjacentHTML('afterend', '<small class="r-vs"></small>');
           row.querySelector('.r-cost').value = item.unitCost;
           row.querySelector('.r-lot').required = item.tracksBatches;
           row.querySelector('.r-lot').placeholder = item.tracksBatches ? 'Requerido' : 'Opcional';
         }
       }
+      /** Received against ordered, per line and for the whole order. */
+      function compare() {
+        if (!fromOrder) return;
+        const short = [], extra = [];
+        let pieces = 0;
+        for (const r of $$('.rline', dlg)) {
+          const got = Number(r.querySelector('.r-qty').value) || 0;
+          const name = r.variant?.displayName || r.querySelector('.r-variant').value || 'Producto';
+          pieces += got;
+          if (r.ordered == null) { if (got > 0) extra.push(`${fmt.qty(got)} × ${name} (no venía en el pedido)`); continue; }
+          const tag = r.querySelector('.r-vs');
+          const diff = got - r.ordered;
+          tag.className = 'r-vs ' + (diff === 0 ? 'ok' : diff < 0 ? 'short' : 'extra');
+          tag.textContent = diff === 0 ? `✓ de ${fmt.qty(r.ordered)}` : diff < 0 ? `Faltan ${fmt.qty(-diff)} de ${fmt.qty(r.ordered)}` : `${fmt.qty(diff)} de más`;
+          if (diff < 0) short.push(`${fmt.qty(-diff)} × ${name}`);
+          if (diff > 0) extra.push(`${fmt.qty(diff)} × ${name} de más`);
+        }
+        const status = $('#r-order-status');
+        $('#r-close-wrap').hidden = !short.length;
+        if (!short.length) {
+          status.className = 'r-order-status ok';
+          status.textContent = `✓ Llegó completo: ${fmt.qty(pieces)} piezas.` + (extra.length ? ` Además: ${extra.join('; ')}.` : '');
+        } else {
+          status.className = 'r-order-status short';
+          status.textContent = `Llegó incompleto. Falta: ${short.join('; ')}. `
+            + ($('#r-close').checked ? 'El pedido se cerrará con ese faltante.' : 'El pedido quedará como "Recibido parcial" para recibir el resto después.')
+            + (extra.length ? ` Además: ${extra.join('; ')}.` : '');
+        }
+      }
+      $('#r-close').addEventListener('change', compare);
+      $('#r-all').addEventListener('click', () => { $$('.rline', dlg).forEach(r => { if (r.ordered != null) r.querySelector('.r-qty').value = r.ordered; }); total(); compare(); });
+      $('#r-none').addEventListener('click', () => { $$('.rline', dlg).forEach(r => { if (r.ordered != null) r.querySelector('.r-qty').value = 0; }); total(); compare(); });
+
       function total() {
         const t = $$('.rline', dlg).reduce((s, r) => s + (Number(r.querySelector('.r-qty').value) || 0) * (Number(r.querySelector('.r-cost').value) || 0), 0);
         $('#r-total').textContent = fmt.money(t);
@@ -144,6 +198,7 @@
       let fromOrder = null;
       $('#new-btn').addEventListener('click', () => {
         fromOrder = null;
+        $('#r-order').hidden = true;
         dlg.querySelector('form').reset();
         dlg.querySelector('.form-error').hidden = true;
         $('#r-lines').innerHTML = '';
@@ -155,7 +210,9 @@
         e.preventDefault();
         if (e.submitter?.value === 'cancel') { dlg.close(); return; }
         const err = dlg.querySelector('.form-error');
-        const rows = $$('.rline', dlg);
+        // An ordered product that did not arrive (0) is simply not part of the reception.
+        const rows = $$('.rline', dlg).filter(r => !(r.ordered != null && !(Number(r.querySelector('.r-qty').value) > 0)));
+        if (!rows.length) { err.textContent = 'No capturaste nada recibido. Si no llegó nada, cierra esta ventana.'; err.hidden = false; return; }
         if (rows.some(r => !r.variant)) { err.textContent = 'Elige cada presentación de la lista de resultados.'; err.hidden = false; return; }
         try {
           const p = await api.post('/purchases', {
@@ -172,7 +229,10 @@
           });
           toast(`Recepción ${p.folio} registrada. Imprime sus etiquetas.`);
           if (fromOrder) {
-            await api.post(`/orders/${fromOrder.id}/received`, { purchaseId: p.id }).catch(POS.fail);
+            const o = await api.post(`/orders/${fromOrder.id}/received`, { purchaseId: p.id, closeIncomplete: $('#r-close').checked }).catch(POS.fail);
+            if (o) toast(o.status === 'Recibido parcial'
+              ? `Pedido ${o.folio}: recibido en parte. Lo que falta queda pendiente.`
+              : `Pedido ${o.folio}: recibido.`);
             fromOrder = null;
             history.replaceState(null, '', location.pathname);
           }
@@ -194,8 +254,13 @@
           $('#r-lines').innerHTML = '';
           $('#r-supplier').value = fromOrder.supplierId ?? '';
           $('#r-notes').value = `Pedido ${fromOrder.folio}`;
-          fromOrder.items.forEach(addLine);
-          total();
+          const pending = fromOrder.items.filter(i => i.pending > 0);
+          pending.forEach(i => addLine(i));
+          const partial = fromOrder.status === 'Recibido parcial';
+          $('#r-order-title').textContent = `Pedido ${fromOrder.folio}${partial ? ' · lo que faltaba por llegar' : ''}: ${pending.length} producto(s), ${fmt.qty(pending.reduce((t, i) => t + i.pending, 0))} piezas`;
+          $('#r-order').hidden = false;
+          $('#r-close').checked = false;
+          total(); compare();
           dlg.showModal();
         } catch (err) { POS.fail(err); }
       }

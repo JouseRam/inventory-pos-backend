@@ -28,6 +28,7 @@ public class PurchaseOrderItemConfiguration : IEntityTypeConfiguration<PurchaseO
         e.ToTable("PurchaseOrderItems");
         e.Property(x => x.Description).HasMaxLength(300).IsRequired();
         e.Property(x => x.Quantity).HasPrecision(18, 3);
+        e.Property(x => x.ReceivedQuantity).HasPrecision(18, 3);
         e.Property(x => x.UnitCost).HasPrecision(18, 2);
         e.HasOne(x => x.PurchaseOrder).WithMany(x => x.Items).HasForeignKey(x => x.PurchaseOrderId).OnDelete(DeleteBehavior.Cascade);
         e.HasOne(x => x.Variant).WithMany().HasForeignKey(x => x.VariantId).OnDelete(DeleteBehavior.Restrict);

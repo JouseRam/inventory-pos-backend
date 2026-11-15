@@ -32,7 +32,7 @@
     <!-- ── Orders and tracking ── -->
     <section data-panel="orders" hidden style="display:grid;gap:16px">
       <div class="toolbar">
-        <label class="field"><span>Estado</span><select id="o-status"><option value="">Todos</option><option>Borrador</option><option>Enviado</option><option>En camino</option><option>Recibido</option><option>Cancelado</option></select></label>
+        <label class="field"><span>Estado</span><select id="o-status"><option value="">Todos</option><option>Borrador</option><option>Enviado</option><option>En camino</option><option>Recibido parcial</option><option>Recibido</option><option>Cancelado</option></select></label>
       </div>
       <section class="panel"><div class="table-wrap"><table>
         <thead><tr><th>Folio</th><th>Proveedor</th><th>Fecha</th><th>Estado</th><th class="num">Productos</th><th class="num">Estimado</th><th>Guía</th></tr></thead>
@@ -86,11 +86,12 @@
               <label class="field span-2"><span>Notas para el proveedor</span><input id="od-notes" maxlength="1000" placeholder="Ej. entregar antes del viernes"></label>
             </div>
             <div class="table-wrap"><table class="order-lines">
-              <thead><tr><th>Producto</th><th class="num">Existencia</th><th class="num">Cantidad</th><th class="num">Costo unit.</th><th class="num">Importe</th><th></th></tr></thead>
+              <thead><tr><th>Producto</th><th class="num" data-scol>Existencia</th><th class="num">Cantidad</th><th class="num" data-rcol>Llegó</th><th class="num">Costo unit.</th><th class="num">Importe</th><th></th></tr></thead>
               <tbody id="od-lines"></tbody>
-              <tfoot><tr><td colspan="4" class="num">Total estimado</td><td class="num" id="od-total"></td><td></td></tr></tfoot>
+              <tfoot><tr><td colspan="4" class="num" id="od-total-label">Total estimado</td><td class="num" id="od-total"></td><td></td></tr></tfoot>
             </table></div>
             <label class="field" data-editable><span>Agregar producto</span><input id="od-add" placeholder="Busca por nombre, tono, SKU o ID"></label>
+            <div class="receptions" id="od-receptions" hidden></div>
             <div class="form-error" hidden id="od-error"></div>
             <div class="order-actions" id="od-actions"></div>
           </div>
@@ -122,12 +123,14 @@
   </main>
   <script src="js/core.js"></script>
   <script src="js/picker.js"></script>
+  <script src="vendor/qrcode/qrcode.js"></script>
+  <script src="js/labels.js"></script>
   <script>
     POS.boot({ module: 'Purchases', title: 'Pedidos' }, async () => {
       const { api, esc, fmt, toast, fail, confirmBox, session, $, $$ } = POS;
       const canEdit = session.can('Purchases', true);
       const phoneText = p => p && p.length === 10 ? `${p.slice(0, 3)} ${p.slice(3, 6)} ${p.slice(6)}` : (p || '');
-      const statusPill = s => `<span class="pill ${({ 'Borrador': '', 'Enviado': 'accent', 'En camino': 'warn', 'Recibido': 'good', 'Cancelado': '' })[s] ?? ''}">${esc(s)}</span>`;
+      const statusPill = s => `<span class="pill ${({ 'Borrador': '', 'Enviado': 'accent', 'En camino': 'warn', 'Recibido parcial': 'warn', 'Recibido': 'good', 'Cancelado': '' })[s] ?? ''}">${esc(s)}</span>`;
       const [suppliers, carriers] = await Promise.all([api.get('/suppliers').catch(() => []), api.get('/orders/carriers')]);
       $('#od-supplier').insertAdjacentHTML('beforeend', suppliers.filter(s => s.isActive).map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join(''));
       $('#od-carrier').innerHTML = carriers.map(c => `<option value="${c.code}">${esc(c.name)}</option>`).join('');
@@ -214,14 +217,24 @@
 
       function renderLines() {
         const editable = !order || open();
+        // Once something arrived, each line shows what came against what was ordered.
+        const showReceived = !!order?.receptions?.length || order?.status === 'Recibido';
+        // What came then matters more than the current stock: the columns swap to keep the table narrow.
+        $$('[data-rcol]', dlg).forEach(el => { el.hidden = !showReceived; });
+        $$('[data-scol]', dlg).forEach(el => { el.hidden = showReceived; });
+        const arrived = l => {
+          const missing = l.quantity - (l.received || 0);
+          return `<td class="num">${fmt.qty(l.received || 0)}<br>${missing <= 0 ? '<span class="pill good">Completo</span>' : `<span class="pill crit">Faltan ${fmt.qty(missing)}</span>`}</td>`;
+        };
         $('#od-lines').innerHTML = lines.length ? lines.map((l, i) => `
           <tr><td>${esc(l.description)}<br><small class="muted mono">${esc(l.sku || '')}</small></td>
-            <td class="num">${fmt.qty(l.stock ?? 0)}</td>
+            ${showReceived ? '' : `<td class="num">${fmt.qty(l.stock ?? 0)}</td>`}
             <td class="num">${editable ? `<input type="number" min="0.001" step="any" value="${l.quantity}" data-lq="${i}" class="qty-input" aria-label="Cantidad">` : fmt.qty(l.quantity)}</td>
+            ${showReceived ? arrived(l) : ''}
             <td class="num">${editable ? `<input type="number" min="0" step="0.01" value="${l.unitCost}" data-lc="${i}" class="qty-input" aria-label="Costo">` : fmt.money(l.unitCost)}</td>
             <td class="num">${fmt.money(l.quantity * l.unitCost)}</td>
             <td>${editable ? `<button class="btn ghost sm danger icon-btn" type="button" data-ldel="${i}" aria-label="Quitar"><i class="bi bi-x-lg"></i></button>` : ''}</td></tr>`).join('')
-          : '<tr><td colspan="6" class="empty">Agrega productos con el buscador de abajo.</td></tr>';
+          : '<tr><td colspan="7" class="empty">Agrega productos con el buscador de abajo.</td></tr>';
         $('#od-total').textContent = fmt.money(lines.reduce((s, l) => s + l.quantity * l.unitCost, 0));
         $$('[data-editable]', dlg).forEach(el => { el.hidden = !editable; });
         $('#od-supplier').disabled = !editable;
@@ -253,15 +266,32 @@
           if (order.whatsAppPhone) a.push(`<button class="btn primary" type="button" data-act="whatsapp"><i class="bi bi-whatsapp"></i>${order.status === 'Borrador' ? 'Enviar' : 'Reenviar'} por WhatsApp</button>`);
           a.push('<button class="btn" type="button" data-act="copy"><i class="bi bi-clipboard"></i>Copiar pedido</button>');
           if (order.status === 'Borrador') a.push('<button class="btn ghost" type="button" data-act="sent">Marcar como enviado</button>');
-          if (session.can('Purchases', true) && !POS.env.central) a.push('<button class="btn" type="button" data-act="receive"><i class="bi bi-box-arrow-in-down"></i>Recibir mercancía</button>');
-          a.push('<button class="btn ghost danger" type="button" data-act="cancel">Cancelar pedido</button>');
-        } else if (order.purchaseId) {
-          a.push(`<a class="btn ghost" href="purchases.html">Ver recepciones</a>`);
+          const partial = order.status === 'Recibido parcial';
+          if (session.can('Purchases', true) && !POS.env.central)
+            a.push(`<button class="btn ${partial ? 'primary' : ''}" type="button" data-act="receive"><i class="bi bi-box-arrow-in-down"></i>${partial ? 'Recibir lo que falta' : 'Recibir mercancía'}</button>`);
+          a.push(partial
+            ? '<button class="btn ghost danger" type="button" data-act="close">Cerrar con faltante</button>'
+            : '<button class="btn ghost danger" type="button" data-act="cancel">Cancelar pedido</button>');
         }
         $('#od-actions').innerHTML = a.join('');
         if (order && !order.whatsAppPhone && open())
           $('#od-actions').insertAdjacentHTML('beforeend', '<p class="muted" style="margin:0;font-size:.85rem;flex-basis:100%">Para enviarlo por WhatsApp registra el teléfono del proveedor (10 dígitos) en Proveedores.</p>');
       }
+
+      /** Receptions of the order, each with its labels (QR or barcode) to stick on the goods. */
+      function renderReceptions() {
+        const box = $('#od-receptions');
+        const list = order?.receptions || [];
+        box.hidden = !list.length;
+        box.innerHTML = list.length ? `<h3><i class="bi bi-box-seam"></i> Recepciones de este pedido</h3>` + list.map(r => `
+          <div class="reception-row"><span><b class="mono">${esc(r.folio)}</b> · ${fmt.dateTime(r.at)} · ${fmt.qty(r.pieces)} piezas · ${fmt.money(r.total)}</span>
+            <button class="btn sm" type="button" data-rlabels="${r.id}" data-rfolio="${esc(r.folio)}"><i class="bi bi-qr-code"></i>Imprimir etiquetas</button></div>`).join('') : '';
+      }
+      $('#od-receptions').addEventListener('click', async e => {
+        const b = e.target.closest('[data-rlabels]');
+        if (!b) return;
+        try { POS.labels.open(await api.get(`/labels/purchase/${b.dataset.rlabels}`), { title: `Recepción ${b.dataset.rfolio}` }); } catch (err) { fail(err); }
+      });
 
       function renderSide() {
         $('#od-side').hidden = !order;
@@ -276,13 +306,13 @@
 
       async function openOrder(o) {
         order = o;
-        lines = o ? o.items.map(i => ({ variantId: i.variantId, description: i.description, sku: i.sku, quantity: i.quantity, unitCost: i.unitCost, stock: i.stock })) : [];
+        lines = o ? o.items.map(i => ({ variantId: i.variantId, description: i.description, sku: i.sku, quantity: i.quantity, unitCost: i.unitCost, stock: i.stock, received: i.receivedQuantity })) : [];
         $('#order-title').innerHTML = o ? `Pedido <span class="mono">${esc(o.folio)}</span>` : 'Nuevo pedido';
         $('#order-status').innerHTML = o ? statusPill(o.status) : '';
         $('#od-supplier').value = o?.supplierId ?? '';
         $('#od-notes').value = o?.notes ?? '';
         $('#od-error').hidden = true;
-        renderLines(); renderActions(); renderSide();
+        renderLines(); renderActions(); renderSide(); renderReceptions();
         if (!dlg.open) dlg.showModal();
       }
       const refresh = async o => { await openOrder(o); loadOrders().catch(() => {}); };
@@ -324,6 +354,9 @@
           } else if (act === 'receive') {
             await api.put(`/orders/${order.id}`, body());
             location.href = `purchases.html#order=${order.id}`;
+          } else if (act === 'close') {
+            if (!await confirmBox(`Cerrar el pedido ${order.folio} con lo que llegó. Lo que falta ya no se esperará.`, { okText: 'Cerrar con faltante', danger: true })) return;
+            await refresh(await api.post(`/orders/${order.id}/close`));
           } else if (act === 'cancel') {
             if (!await confirmBox(`Cancelar el pedido ${order.folio}.`, { okText: 'Cancelar pedido', danger: true })) return;
             await refresh(await api.post(`/orders/${order.id}/cancel`));

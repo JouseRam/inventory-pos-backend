@@ -119,6 +119,73 @@ public class PurchaseOrderTests
         Assert.Single(order.Events, e => e.Text.Contains("modificó"));
     }
 
+    private static async Task<int> ReceiveAsync(Setup s, params (int Variant, decimal Qty)[] lines) =>
+        (await s.Pos.Purchases.ReceiveAsync(new InventoryPOS.Application.Features.Inventory.PurchaseCreateDto(s.SupplierId, null, null,
+            lines.Select(l => new InventoryPOS.Application.Features.Inventory.PurchaseItemSaveDto(l.Variant, l.Qty, 50, null, null)).ToList()))).Id;
+
+    [Fact]
+    public async Task A_delivery_that_arrives_short_stays_open_for_the_rest_and_a_second_reception_completes_it()
+    {
+        using var s = new Setup();
+        var (fast, slow, low) = await s.CatalogAsync();
+        var order = await s.Orders.CreateAsync(new OrderSaveDto(s.SupplierId, null, [new(fast, 22), new(low, 2)]));
+        await s.Orders.MarkSentAsync(order.Id);
+
+        // First box: 15 of 22 dyes and both developers.
+        var first = await ReceiveAsync(s, (fast, 15), (low, 2));
+        order = await s.Orders.MarkReceivedAsync(order.Id, new OrderReceivedDto(first));
+        Assert.Equal(PurchaseOrderStatus.PartiallyReceived, order.Status);
+        var dye = order.Items.Single(i => i.VariantId == fast);
+        Assert.Equal((15m, 7m), (dye.ReceivedQuantity, dye.Pending));
+        Assert.Equal(0, order.Items.Single(i => i.VariantId == low).Pending);
+        Assert.Contains("llegó incompleto. Falta: 7 × Tinte rápido", order.Events[0].Text);
+        // The same reception cannot be counted twice.
+        await Assert.ThrowsAsync<DomainException>(() => s.Orders.MarkReceivedAsync(order.Id, new OrderReceivedDto(first)));
+        // Only the 7 still expected are on their way: they are not suggested again, the 15 already count as stock.
+        Assert.DoesNotContain((await s.Orders.SuggestAsync()).Suppliers.SelectMany(g => g.Lines), l => l.VariantId == fast);
+        // Part of it arrived: it is closed with the shortage, not cancelled.
+        await Assert.ThrowsAsync<DomainException>(() => s.Orders.CancelAsync(order.Id));
+
+        // Second box: the 7 dyes plus a shampoo that was not ordered.
+        var second = await ReceiveAsync(s, (fast, 7), (slow, 1));
+        order = await s.Orders.MarkReceivedAsync(order.Id, new OrderReceivedDto(second));
+        Assert.Equal(PurchaseOrderStatus.Received, order.Status);
+        Assert.All(order.Items, i => Assert.Equal(0, i.Pending));
+        Assert.Contains("llegó completo", order.Events[0].Text);
+        Assert.Contains("Shampoo", order.Events[0].Text);
+        Assert.Equal(2, order.Receptions!.Count);
+        Assert.Equal([17m, 8m], order.Receptions.Select(r => r.Pieces));
+    }
+
+    [Fact]
+    public async Task A_short_delivery_can_be_closed_without_waiting_for_the_rest()
+    {
+        using var s = new Setup();
+        var (fast, _, low) = await s.CatalogAsync();
+        var order = await s.Orders.CreateAsync(new OrderSaveDto(s.SupplierId, null, [new(fast, 10), new(low, 4)]));
+        await s.Orders.MarkSentAsync(order.Id);
+
+        // Closed right at the reception.
+        order = await s.Orders.MarkReceivedAsync(order.Id, new OrderReceivedDto(await ReceiveAsync(s, (fast, 10)), CloseIncomplete: true));
+        Assert.Equal(PurchaseOrderStatus.Received, order.Status);
+        Assert.Contains(order.Events, e => e.Text.Contains("cerrado con faltante"));
+        Assert.Equal(4, order.Items.Single(i => i.VariantId == low).Pending);
+
+        // Or later, from a partial order.
+        var other = await s.Orders.CreateAsync(new OrderSaveDto(s.SupplierId, null, [new(fast, 5), new(low, 1)]));
+        await s.Orders.MarkSentAsync(other.Id);
+        other = await s.Orders.MarkReceivedAsync(other.Id, new OrderReceivedDto(await ReceiveAsync(s, (fast, 5))));
+        Assert.Equal(PurchaseOrderStatus.PartiallyReceived, other.Status);
+        // Tracking the rest keeps it partial.
+        other = await s.Orders.SetTrackingAsync(other.Id, new TrackingSaveDto("dhl", "123"));
+        Assert.Equal(PurchaseOrderStatus.PartiallyReceived, other.Status);
+        // Adjusting the list keeps what already arrived.
+        other = await s.Orders.UpdateAsync(other.Id, new OrderSaveDto(s.SupplierId, null, [new(fast, 5), new(low, 2)]));
+        Assert.Equal(5, other.Items.Single(i => i.VariantId == fast).ReceivedQuantity);
+        other = await s.Orders.CloseIncompleteAsync(other.Id);
+        Assert.Equal(PurchaseOrderStatus.Received, other.Status);
+    }
+
     [Fact]
     public async Task Supplier_stats_show_how_much_and_how_often_was_bought_and_a_message_to_negotiate()
     {

@@ -11,6 +11,8 @@ public class Purchase : BaseEntity
     public decimal Total { get; set; }
     public string? Notes { get; set; }
     public string? UserId { get; set; }
+    /// <summary>The supplier order this reception received (local to the register; not synced).</summary>
+    public int? PurchaseOrderId { get; set; }
 
     public Supplier? Supplier { get; set; }
     public ICollection<PurchaseItem> Items { get; set; } = [];

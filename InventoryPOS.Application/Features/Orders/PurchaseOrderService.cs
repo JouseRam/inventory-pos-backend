@@ -22,7 +22,14 @@ public record OrderItemSaveDto(int VariantId, decimal Quantity, decimal? UnitCos
 public record OrderSaveDto(int? SupplierId, string? Notes, List<OrderItemSaveDto> Items);
 
 public record OrderItemDto(int Id, int VariantId, string Description, string? Sku, decimal Quantity, decimal UnitCost, decimal Subtotal, decimal Stock,
-    bool TracksBatches = false);
+    bool TracksBatches = false, decimal ReceivedQuantity = 0)
+{
+    /// <summary>Pieces still expected from the supplier.</summary>
+    public decimal Pending => Math.Max(0, Quantity - ReceivedQuantity);
+}
+
+/// <summary>A reception that brought goods of the order in; its labels can be printed again from the order.</summary>
+public record OrderReceptionDto(int Id, string Folio, DateTime At, decimal Pieces, decimal Total);
 
 public record OrderEventDto(DateTime At, string Text, bool Manual);
 
@@ -30,7 +37,7 @@ public record OrderEventDto(DateTime At, string Text, bool Manual);
 public record OrderDto(int Id, string Folio, int? SupplierId, string? SupplierName, string? SupplierContact, string? WhatsAppPhone,
     string Status, string? Notes, DateTime CreatedAt, DateTime? SentAt, string? Carrier, string? CarrierName, string? TrackingNumber,
     string? TrackingUrl, DateTime? ShippedAt, DateTime? ReceivedAt, int? PurchaseId, decimal EstimatedTotal, string WhatsAppText,
-    IReadOnlyList<OrderItemDto> Items, IReadOnlyList<OrderEventDto> Events);
+    IReadOnlyList<OrderItemDto> Items, IReadOnlyList<OrderEventDto> Events, IReadOnlyList<OrderReceptionDto>? Receptions = null);
 
 public record OrderSummaryDto(int Id, string Folio, string? SupplierName, string Status, DateTime CreatedAt, int ItemCount, decimal EstimatedTotal,
     string? CarrierName, string? TrackingNumber);
@@ -39,7 +46,8 @@ public record TrackingSaveDto(string Carrier, string TrackingNumber);
 
 public record OrderEventSaveDto(string Text);
 
-public record OrderReceivedDto(int? PurchaseId);
+/// <summary>A reception for the order. With missing pieces the order stays open for the rest, unless <paramref name="CloseIncomplete"/>.</summary>
+public record OrderReceivedDto(int? PurchaseId, bool CloseIncomplete = false);
 
 public record CarrierDto(string Code, string Name);
 
@@ -115,8 +123,9 @@ public class PurchaseOrderService(IUnitOfWork uow, IFolioGenerator folios, ICurr
             .GroupBy(i => i.VariantId).ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity));
         // Pieces already ordered and on their way are not suggested again.
         var onOrder = (await uow.Repository<PurchaseOrderItem>().ListAsync(i =>
-                i.PurchaseOrder.Status == PurchaseOrderStatus.Sent || i.PurchaseOrder.Status == PurchaseOrderStatus.Shipped, ct))
-            .GroupBy(i => i.VariantId).ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity));
+                i.PurchaseOrder.Status == PurchaseOrderStatus.Sent || i.PurchaseOrder.Status == PurchaseOrderStatus.Shipped
+                || i.PurchaseOrder.Status == PurchaseOrderStatus.PartiallyReceived, ct))
+            .GroupBy(i => i.VariantId).ToDictionary(g => g.Key, g => g.Sum(i => Math.Max(0, i.Quantity - i.ReceivedQuantity)));
 
         var groups = new Dictionary<int, (string Name, bool WhatsApp, List<SuggestionLineDto> Lines)>();
         foreach (var product in products)
@@ -172,12 +181,17 @@ public class PurchaseOrderService(IUnitOfWork uow, IFolioGenerator folios, ICurr
         var events = await uow.Repository<PurchaseOrderEvent>().ListAsync(e => e.PurchaseOrderId == id, ct);
         var itemDtos = items.Select(i => new OrderItemDto(i.Id, i.VariantId, i.Description, stock.GetValueOrDefault(i.VariantId)?.SKU,
             i.Quantity, i.UnitCost, Money.Round(i.Quantity * i.UnitCost), stock.GetValueOrDefault(i.VariantId)?.Stock ?? 0,
-            stock.GetValueOrDefault(i.VariantId)?.Product.TracksBatches ?? false)).ToList();
+            stock.GetValueOrDefault(i.VariantId)?.Product.TracksBatches ?? false, i.ReceivedQuantity)).ToList();
+        var receptions = (await uow.Repository<Purchase>().ListAsync(p => p.PurchaseOrderId == id, ct)).OrderBy(p => p.CreatedAt).ToList();
+        var receivedPieces = receptions.Count == 0 ? new Dictionary<int, decimal>()
+            : (await uow.Repository<PurchaseItem>().ListAsync(i => i.Purchase.PurchaseOrderId == id, ct))
+                .GroupBy(i => i.PurchaseId).ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity));
         return new OrderDto(o.Id, o.Folio, o.SupplierId, supplier?.Name, supplier?.ContactName, PhoneNumber.Normalize(supplier?.Phone),
             o.Status, o.Notes, o.CreatedAt, o.SentAt, o.Carrier, Carriers.Find(o.Carrier)?.Name, o.TrackingNumber,
             Carriers.TrackingUrl(o.Carrier, o.TrackingNumber), o.ShippedAt, o.ReceivedAt, o.PurchaseId,
             Money.Round(itemDtos.Sum(i => i.Subtotal)), await WhatsAppTextAsync(o, supplier, itemDtos, ct), itemDtos,
-            events.OrderByDescending(e => e.CreatedAt).ThenByDescending(e => e.Id).Select(e => new OrderEventDto(e.CreatedAt, e.Text, e.Manual)).ToList());
+            events.OrderByDescending(e => e.CreatedAt).ThenByDescending(e => e.Id).Select(e => new OrderEventDto(e.CreatedAt, e.Text, e.Manual)).ToList(),
+            receptions.Select(p => new OrderReceptionDto(p.Id, p.Folio, p.CreatedAt, receivedPieces.GetValueOrDefault(p.Id), p.Total)).ToList());
     }
 
     public async Task<OrderDto> CreateAsync(OrderSaveDto dto, CancellationToken ct = default)
@@ -217,6 +231,8 @@ public class PurchaseOrderService(IUnitOfWork uow, IFolioGenerator folios, ICurr
         order.Notes = dto.Notes?.Trim();
         order.UpdatedAt = DateTime.UtcNow;
         await SetItemsAsync(order, dto.Items, ct);
+        // What already arrived stays counted when the list is adjusted for the rest.
+        foreach (var item in order.Items) item.ReceivedQuantity = old.Where(o => o.VariantId == item.VariantId).Sum(o => o.ReceivedQuantity);
         var after = Key(order.Items.Select(i => (i.VariantId, i.Quantity, i.UnitCost))) + "|" + order.SupplierId;
         // Saving before sending or receiving is routine; only a real change goes to the timeline.
         if (order.Status != PurchaseOrderStatus.Draft && before != after) AddEvent(order, "Se modificó la lista del pedido.");
@@ -245,7 +261,8 @@ public class PurchaseOrderService(IUnitOfWork uow, IFolioGenerator folios, ICurr
         order.TrackingNumber = dto.TrackingNumber.Trim();
         order.ShippedAt ??= DateTime.UtcNow;
         order.SentAt ??= order.ShippedAt;
-        order.Status = PurchaseOrderStatus.Shipped;
+        // The rest of a partial delivery is on its way: the order keeps saying part of it already arrived.
+        if (order.Status != PurchaseOrderStatus.PartiallyReceived) order.Status = PurchaseOrderStatus.Shipped;
         AddEvent(order, $"En camino con {carrier.Name}, guía {order.TrackingNumber}.");
         await uow.SaveChangesAsync(ct);
         return await GetAsync(id, ct);
@@ -261,23 +278,91 @@ public class PurchaseOrderService(IUnitOfWork uow, IFolioGenerator folios, ICurr
         return await GetAsync(id, ct);
     }
 
+    /// <summary>
+    /// Compares a reception with the order: what arrived complete, what is missing, what came extra. With missing pieces the order
+    /// stays "Recibido parcial" for the rest (a later reception completes it), unless the user closes it with the shortage.
+    /// </summary>
     public async Task<OrderDto> MarkReceivedAsync(int id, OrderReceivedDto dto, CancellationToken ct = default)
     {
         var order = await LoadAsync(id, ct);
         if (order.Status is PurchaseOrderStatus.Received or PurchaseOrderStatus.Cancelled) throw new DomainException("Este pedido ya está cerrado.");
-        order.Status = PurchaseOrderStatus.Received;
-        order.ReceivedAt = DateTime.UtcNow;
-        order.PurchaseId = dto.PurchaseId;
-        var folio = dto.PurchaseId is { } pid ? (await uow.Purchases.GetByIdAsync(pid, ct))?.Folio : null;
-        AddEvent(order, folio == null ? "Mercancía recibida." : $"Mercancía recibida en la recepción {folio}.");
+        var items = (await uow.Repository<PurchaseOrderItem>().ListAsync(i => i.PurchaseOrderId == id, ct)).ToList();
+        var now = DateTime.UtcNow;
+
+        if (dto.PurchaseId is not { } purchaseId)
+        {
+            // Marked by hand, without a reception: everything is taken as arrived.
+            foreach (var item in items) item.ReceivedQuantity = item.Quantity;
+            Close(order, now);
+            AddEvent(order, "Mercancía recibida.");
+            await uow.SaveChangesAsync(ct);
+            return await GetAsync(id, ct);
+        }
+
+        var purchase = await uow.Purchases.GetWithItemsAsync(purchaseId, ct) ?? throw NotFoundException.For("Recepción", purchaseId);
+        if (purchase.PurchaseOrderId is { } linked)
+            throw new DomainException(linked == id ? $"La recepción {purchase.Folio} ya se contó en este pedido." : $"La recepción {purchase.Folio} ya es de otro pedido.");
+        purchase.PurchaseOrderId = id;
+        order.PurchaseId = purchase.Id;
+
+        var arrived = purchase.Items.GroupBy(i => i.VariantId).ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity));
+        var extra = new List<string>();
+        foreach (var (variantId, quantity) in arrived)
+        {
+            var line = items.FirstOrDefault(i => i.VariantId == variantId);
+            if (line == null)
+            {
+                extra.Add($"{quantity:0.##} × {purchase.Items.First(i => i.VariantId == variantId).Variant.DisplayName()} (no venía en el pedido)");
+                continue;
+            }
+            var before = Math.Max(0, line.Quantity - line.ReceivedQuantity);
+            line.ReceivedQuantity += quantity;
+            if (quantity > before) extra.Add($"{quantity - before:0.##} × {line.Description} de más");
+        }
+        var missing = items.Where(i => i.ReceivedQuantity < i.Quantity).ToList();
+        var shortage = string.Join("; ", missing.Select(i => $"{i.Quantity - i.ReceivedQuantity:0.##} × {i.Description}"));
+
+        var text = missing.Count == 0
+            ? $"Recepción {purchase.Folio}: llegó completo."
+            : $"Recepción {purchase.Folio}: llegó incompleto. Falta: {shortage}.";
+        if (extra.Count > 0) text += $" Llegó además: {string.Join("; ", extra)}.";
+        AddEvent(order, text[..Math.Min(text.Length, 1000)]);
+
+        if (missing.Count == 0) Close(order, now);
+        else if (dto.CloseIncomplete)
+        {
+            Close(order, now);
+            AddEvent(order, "Pedido cerrado con faltante: ya no se espera el resto.");
+        }
+        else order.Status = PurchaseOrderStatus.PartiallyReceived;
+
         await uow.SaveChangesAsync(ct);
         return await GetAsync(id, ct);
+    }
+
+    /// <summary>Stops waiting for what is missing of a partial delivery.</summary>
+    public async Task<OrderDto> CloseIncompleteAsync(int id, CancellationToken ct = default)
+    {
+        var order = await LoadAsync(id, ct);
+        if (order.Status != PurchaseOrderStatus.PartiallyReceived) throw new DomainException("Solo se cierra así un pedido recibido en parte.");
+        Close(order, DateTime.UtcNow);
+        AddEvent(order, "Pedido cerrado con faltante: ya no se espera el resto.");
+        await uow.SaveChangesAsync(ct);
+        return await GetAsync(id, ct);
+    }
+
+    private static void Close(PurchaseOrder order, DateTime at)
+    {
+        order.Status = PurchaseOrderStatus.Received;
+        order.ReceivedAt = at;
     }
 
     public async Task<OrderDto> CancelAsync(int id, CancellationToken ct = default)
     {
         var order = await LoadAsync(id, ct);
         if (order.Status == PurchaseOrderStatus.Received) throw new DomainException("Un pedido recibido no se cancela.");
+        if (order.Status == PurchaseOrderStatus.PartiallyReceived)
+            throw new DomainException("Parte del pedido ya llegó: ciérralo con faltante en lugar de cancelarlo.");
         order.Status = PurchaseOrderStatus.Cancelled;
         AddEvent(order, "Pedido cancelado.");
         await uow.SaveChangesAsync(ct);

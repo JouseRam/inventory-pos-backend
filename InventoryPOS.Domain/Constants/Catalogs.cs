@@ -96,8 +96,10 @@ public static class PurchaseOrderStatus
     public const string Draft = "Borrador";
     public const string Sent = "Enviado";
     public const string Shipped = "En camino";
+    /// <summary>Part of the goods arrived; the rest is still expected.</summary>
+    public const string PartiallyReceived = "Recibido parcial";
     public const string Received = "Recibido";
     public const string Cancelled = "Cancelado";
 
-    public static readonly string[] All = [Draft, Sent, Shipped, Received, Cancelled];
+    public static readonly string[] All = [Draft, Sent, Shipped, PartiallyReceived, Received, Cancelled];
 }

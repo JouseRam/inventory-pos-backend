@@ -63,7 +63,26 @@ En **Movimientos del pedido** queda la historia: cuándo se creó, se envió, se
 
 ## Recibir la mercancía
 
-Cuando llegue el paquete, pulsa **Recibir mercancía** en el pedido. Se abre **Recepciones** con el proveedor, los productos, las cantidades y los costos ya llenos. Corrige lo que haya llegado distinto, captura **lote** y **caducidad** si aplica y pulsa **Registrar recepción**. El pedido queda **Recibido** y ligado a esa recepción.
+Cuando llegue el paquete, pulsa **Recibir mercancía** en el pedido. Se abre **Recepciones** con el proveedor, los productos y los costos ya llenos.
+
+![Recepción de un pedido que llegó incompleto](shot:order-receive)
+
+1. **Cuenta lo que viene en la caja** y captúralo en **Llegó**, producto por producto. Si todo vino bien, pulsa **Llegó todo completo**. Lo que no llegó déjalo en **0**.
+2. Junto a cada producto ves si está **completo** (✓), cuántas piezas **faltan** o si llegaron **de más**. Arriba, el resumen dice si el pedido **llegó completo** o qué falta.
+3. Captura **lote** y **caducidad** si aplica y pulsa **Registrar recepción**. La existencia sube solo con lo que de verdad llegó.
+4. Se abre la **impresión de etiquetas** con una etiqueta por pieza recibida (código **QR** o **de barras**, con su lote). Imprímelas y pégalas en la mercancía antes de acomodarla.
+
+Qué pasa con el pedido:
+
+| Si… | El pedido queda |
+|---|---|
+| Llegó todo | **Recibido**. |
+| Faltó algo | **Recibido parcial**: lo que falta queda pendiente. Cuando llegue, abre el pedido y pulsa **Recibir lo que falta**; se abre solo con esas piezas. |
+| Faltó algo y ya no lo vas a esperar | Marca **Cerrar el pedido con lo que llegó** al recibir, o después pulsa **Cerrar con faltante** en el pedido. Queda **Recibido** con el faltante anotado. |
+
+En el pedido, la columna **Llegó** muestra lo recibido contra lo pedido (**Completo** o **Faltan N**), y en **Recepciones de este pedido** están todas sus recepciones con **Imprimir etiquetas** para volver a sacarlas. Cada recepción queda en **Movimientos del pedido** con lo que llegó y lo que faltó, para reclamarlo al proveedor.
+
+> Un pedido que ya llegó en parte no se cancela: se cierra con faltante, así queda el registro de lo que sí entró.
 
 ## Lista de pedidos
 

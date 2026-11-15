@@ -52,6 +52,10 @@ public class PurchaseOrdersController(PurchaseOrderService service, SupplierStat
     [HttpPost("{id:int}/received")]
     public Task<OrderDto> Received(int id, OrderReceivedDto dto, CancellationToken ct) => service.MarkReceivedAsync(id, dto, ct);
 
+    /// <summary>A partial delivery: stop waiting for the rest.</summary>
+    [HttpPost("{id:int}/close")]
+    public Task<OrderDto> Close(int id, CancellationToken ct) => service.CloseIncompleteAsync(id, ct);
+
     [HttpPost("{id:int}/cancel")]
     public Task<OrderDto> Cancel(int id, CancellationToken ct) => service.CancelAsync(id, ct);
 }
