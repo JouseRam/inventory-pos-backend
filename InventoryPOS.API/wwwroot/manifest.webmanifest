@@ -3,8 +3,8 @@
   "short_name": "Anna’s",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#faf7f8",
-  "theme_color": "#9c1f5c",
+  "background_color": "#faf7f5",
+  "theme_color": "#2b2a29",
   "icons": [
     {
       "src": "img/icon-192.png",

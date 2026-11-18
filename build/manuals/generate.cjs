@@ -178,7 +178,7 @@ const SHOTS = [
         await p.fill('#promo-form [name=title]', '2x1 en tintes este fin de semana');
         await p.fill('#promo-form [name=message]', 'Lleva dos tintes Igora Royal y paga uno. Válido sábado y domingo, hasta agotar existencias.');
         const png = await p.evaluate(() => { const c = Object.assign(document.createElement('canvas'), { width: 1200, height: 900 }); const g = c.getContext('2d');
-          const gr = g.createLinearGradient(0, 0, 1200, 900); gr.addColorStop(0, '#9c1f5c'); gr.addColorStop(1, '#f2a65a'); g.fillStyle = gr; g.fillRect(0, 0, 1200, 900);
+          const gr = g.createLinearGradient(0, 0, 1200, 900); gr.addColorStop(0, '#3a3a3a'); gr.addColorStop(1, '#a88579'); g.fillStyle = gr; g.fillRect(0, 0, 1200, 900);
           g.fillStyle = '#fff'; g.font = 'bold 220px sans-serif'; g.textAlign = 'center'; g.fillText('2x1', 600, 470); g.font = '600 70px sans-serif'; g.fillText('en tintes', 600, 590);
           return c.toDataURL('image/png').split(',')[1]; });
         await p.setInputFiles('#promo-file', { name: 'promo.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
@@ -251,7 +251,8 @@ function html(manuals, { title, subtitle }) {
   const font = (file, family, weight) => `@font-face{font-family:'${family}';src:url(${dataUri(path.join(FONTS, file), 'font/woff2')}) format('woff2');font-weight:${weight};}`;
   const fonts = font('instrument-sans-400-700-latin.woff2', 'Instrument Sans', '400 700') + font('instrument-sans-400-700-latin-ext.woff2', 'Instrument Sans', '400 700')
     + font('bricolage-grotesque-500-750-latin.woff2', 'Bricolage Grotesque', '500 750') + font('bricolage-grotesque-500-750-latin-ext.woff2', 'Bricolage Grotesque', '500 750')
-    + font('ibm-plex-mono-400-latin.woff2', 'IBM Plex Mono', 400);
+    + font('ibm-plex-mono-400-latin.woff2', 'IBM Plex Mono', 400)
+    + font('cormorant-garamond-600-latin.woff2', 'Cormorant Garamond', 600) + font('cormorant-garamond-600-latin-ext.woff2', 'Cormorant Garamond', 600);
   const renderer = new marked.Renderer();
   renderer.image = ({ href, text }) => href.startsWith('shot:')
     ? `<figure><img src="${shotUri(href.slice(5))}" alt="${text}"><figcaption>${text}</figcaption></figure>`
@@ -264,10 +265,11 @@ function html(manuals, { title, subtitle }) {
   const toc = manuals.length > 1 ? `<section class="toc"><div class="eyebrow">Anna’s Beauty Supply POS</div><h1>${title}</h1><p class="lead">${subtitle}</p>
       <h2>Contenido</h2><ol>${manuals.map(m => `<li><b>${m.title}</b><span>${m.summary}</span></li>`).join('')}</ol></section>` : '';
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><style>${fonts}
-    :root { --ink:#221a20; --ink-2:#4a3f47; --muted:#7a6f77; --line:#e6dfe3; --accent:#9c1f5c; --soft:#f6eef2; }
+    :root { --ink:#2b2a29; --ink-2:#57504d; --muted:#7a6e69; --line:#e6ddd8; --accent:#806058; --soft:#f3eeeb; }
     @page { size: Letter; margin: 18mm 16mm 20mm; }
     body { font-family:'Instrument Sans',sans-serif; color:var(--ink); font-size:10.5pt; line-height:1.5; margin:0; }
     h1,h2,h3 { font-family:'Bricolage Grotesque',sans-serif; line-height:1.15; color:var(--ink); }
+    h1 { font-family:'Cormorant Garamond',Georgia,serif; font-weight:600; letter-spacing:0; } /* the logo's serif, as in the app's titles */
     h1 { font-size:26pt; margin:4px 0 8px; } h2 { font-size:15pt; margin:22px 0 6px; padding-top:6px; border-top:1px solid var(--line); }
     h3 { font-size:11.5pt; margin:14px 0 4px; } p { margin:6px 0; } ul,ol { padding-left:20px; margin:6px 0; } li { margin:3px 0; }
     code, kbd { font-family:'IBM Plex Mono',monospace; font-size:9pt; background:var(--soft); padding:1px 5px; border-radius:4px; }

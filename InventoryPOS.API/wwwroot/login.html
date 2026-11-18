@@ -6,7 +6,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
   <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#9c1f5c">
+  <meta name="theme-color" content="#2b2a29">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Anna’s Beauty Supply</title>
   <link rel="stylesheet" href="vendor/fonts.css">
@@ -15,27 +15,31 @@
 </head>
 <body>
   <div class="login">
-    <section class="login-art" aria-hidden="true">
-      <div class="ramp" id="ramp"></div>
-      <h2>Del 1 al 10, cada tono en su lugar.</h2>
-      <p>Ventas, caja e inventario por lote para tu tienda de belleza.</p>
+    <!-- The brand on its own charcoal, like the tools of the logo; on a phone it becomes a band above the form. -->
+    <section class="login-brand">
+      <div class="login-brand-inner">
+        <img id="business-logo" src="img/logo-dark.png" alt="Anna’s Beauty Supply" width="720" height="477">
+        <p class="login-tagline">Belleza profesional al mayoreo y menudeo</p>
+        <p class="login-services" aria-hidden="true">Punto de venta · Inventario · Caja</p>
+      </div>
     </section>
     <section class="login-form">
       <form id="login-form" autocomplete="on">
         <div>
-          <h1 class="login-logo" id="business-name"><img class="logo logo-light" src="img/logo.png" alt="Anna’s Beauty Supply" width="720" height="477"><img class="logo logo-dark" src="img/logo-dark.png" alt="" aria-hidden="true" width="720" height="477"></h1>
-          <div class="eyebrow" style="text-align:center">Inicia sesión</div>
+          <div class="eyebrow login-eyebrow" id="business-name">Anna’s Beauty Supply</div>
+          <h1 class="login-title">Bienvenida</h1>
+          <p class="muted" style="margin:4px 0 0">Inicia sesión para continuar.</p>
         </div>
         <label class="field"><span>Usuario</span><input id="userName" name="userName" autocomplete="username" required autofocus></label>
         <label class="field"><span>Contraseña</span><input id="password" name="password" type="password" autocomplete="current-password" required></label>
         <div class="form-error" id="login-error" role="alert" hidden></div>
         <button class="btn primary lg" type="submit" id="login-btn">Entrar</button>
-        <p class="muted" style="margin:0;font-size:.85rem">¿Olvidaste tu contraseña? Pide al administrador que la restablezca.</p>
+        <p class="muted" style="margin:0;font-size:.85rem;text-align:center">¿Olvidaste tu contraseña? Pide al administrador que la restablezca.</p>
       </form>
       <form id="setup-form" hidden autocomplete="off">
         <div>
-          <div class="eyebrow">Primer arranque</div>
-          <h1>Configura tu caja</h1>
+          <div class="eyebrow login-eyebrow">Primer arranque</div>
+          <h1 class="login-title">Configura tu caja</h1>
           <p class="muted" style="margin:6px 0 0">Crea la cuenta de la dueña o encargado. Con ella darás de alta a los cajeros y sus permisos.</p>
         </div>
         <label class="field"><span>Nombre de la tienda</span><input id="s-business" maxlength="150" value="Anna’s Beauty Supply" required></label>
@@ -51,12 +55,7 @@
   <script src="js/core.js"></script>
   <script>
     (function () {
-      const { api, session, shade, $ } = POS;
-      // Level chart with the natural reflect, the reference every colorist knows.
-      $('#ramp').innerHTML = Array.from({ length: 10 }, (_, i) => {
-        const code = `${i + 1}.0`;
-        return `<span style="background:${shade.color(code)}">${code}</span>`;
-      }).join('');
+      const { api, session, $ } = POS;
 
       if (session.token) { location.href = session.profile ? POS.firstAllowedPage() : 'dashboard.html'; return; }
 
@@ -64,7 +63,7 @@
       api.get('/auth/setup').then(r => {
         if (r.businessName) {
           document.title = r.businessName;
-          $('#business-name .logo-light').alt = r.businessName;
+          $('#business-name').textContent = $('#business-logo').alt = r.businessName;
           POS.business.remember(r.businessName);
         }
         if (!r.needsSetup) return;
