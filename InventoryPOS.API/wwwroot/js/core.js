@@ -343,7 +343,7 @@
       <div class="nav-scrim" id="nav-scrim" aria-hidden="true"></div>
       <aside class="rail" id="rail" aria-label="Menú">
         <button class="btn ghost icon-btn rail-close" id="rail-close" type="button" aria-label="Cerrar menú"><i class="bi bi-x-lg"></i></button>
-        <a class="brand" href="${firstAllowedPage()}"><b id="brand-name">${esc(business.name)}</b><span>POS</span></a>
+        <a class="brand" href="${firstAllowedPage()}"><img class="logo logo-light" id="brand-name" src="img/logo.png" alt="${esc(business.name)}" width="720" height="477"><img class="logo logo-dark" src="img/logo-dark.png" alt="" aria-hidden="true" width="720" height="477"></a>
         ${nav}
         <div class="rail-foot">
           <div class="who"><b>${esc(profile?.fullName || profile?.userName || '')}</b><span class="muted">${profile?.isSuperAdmin ? 'Administrador' : esc(profile?.userName || '')}</span></div>
@@ -532,7 +532,7 @@
     document.title = `${title} · ${business.name}`;
     business.refresh().then(name => {
       const brand = document.getElementById('brand-name');
-      if (brand) brand.textContent = name;
+      if (brand) brand.alt = name;
       document.title = `${title} · ${name}`;
     });
     wireAlerts();

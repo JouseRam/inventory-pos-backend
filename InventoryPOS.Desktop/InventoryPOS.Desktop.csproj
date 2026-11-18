@@ -11,6 +11,8 @@
     <AssemblyName>MatizPOS</AssemblyName>
     <RootNamespace>InventoryPOS.Desktop</RootNamespace>
     <Product>Anna’s Beauty Supply POS</Product>
+    <!-- The store's icon: the .exe, its window and its notifications (MainForm reads it from the executable). -->
+    <ApplicationIcon>app.ico</ApplicationIcon>
     <Version>1.0.0</Version>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>false</SelfContained>
