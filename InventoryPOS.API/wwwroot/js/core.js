@@ -347,9 +347,10 @@
         ${nav}
         <div class="rail-foot">
           <div class="who"><b>${esc(profile?.fullName || profile?.userName || '')}</b><span class="muted">${profile?.isSuperAdmin ? 'Administrador' : esc(profile?.userName || '')}</span></div>
-          <div style="display:flex;gap:6px">
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
             <button class="btn ghost sm" id="theme-btn" type="button"><i class="bi bi-circle-half"></i>Tema</button>
             <button class="btn ghost sm" id="logout-btn" type="button"><i class="bi bi-box-arrow-right"></i>Salir</button>
+            ${passkeys.supported() ? `<button class="btn ghost sm" id="passkeys-btn" type="button"><i class="bi bi-fingerprint"></i>${esc(passkeys.label())}</button>` : ''}
           </div>
         </div>
       </aside>
@@ -375,6 +376,8 @@
 
     shell.querySelector('#theme-btn').onclick = toggleTheme;
     shell.querySelector('#logout-btn').onclick = () => session.logout();
+    const passkeysBtn = shell.querySelector('#passkeys-btn');
+    if (passkeysBtn) passkeysBtn.onclick = () => passkeys.manage();
     // Phone drawer: opens from the menu button; the dimmed backdrop, the X, Escape or choosing a page close it.
     const menuBtn = shell.querySelector('#menu-btn');
     const setNav = open => {
@@ -542,6 +545,127 @@
     try { await run(); } catch (err) { fail(err); }
   }
 
-  window.POS = { api, session, env, business, refreshAlerts, canAdmin, fmt, esc, shade, toast, fail, $, $$, formData, fillForm, dialogForm, confirmBox, boot,
+  // ── Passkeys: sign in with Face ID / Touch ID, fingerprint or Windows Hello ──
+  // The device keeps the key and unlocks it with the biometric; the server only sees a signature over a one-time challenge.
+  const b64u = {
+    toBuffer(s) {
+      const b64 = s.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(s.length / 4) * 4, '=');
+      return Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer;
+    },
+    from(buffer) {
+      if (!buffer) return null;
+      let s = '';
+      new Uint8Array(buffer).forEach(b => { s += String.fromCharCode(b); });
+      return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    },
+  };
+  // The server's options carry empty fields (null); browsers would read some of them as the text "null".
+  const clean = o => Array.isArray(o) ? o.map(clean)
+    : o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).filter(([, v]) => v != null).map(([k, v]) => [k, clean(v)])) : o;
+  const ua = navigator.userAgent;
+  const passkeys = {
+    /** A secure page on a domain (not the register's 127.0.0.1) in a browser with passkeys. */
+    supported() {
+      return !!(window.PublicKeyCredential && window.isSecureContext && navigator.credentials)
+        && !/^\d+\.\d+\.\d+\.\d+$|^\[/.test(location.hostname);
+    },
+    /** Whether this device has a biometric or screen lock to unlock passkeys with. */
+    async available() {
+      if (!passkeys.supported()) return false;
+      try { return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable(); } catch { return false; }
+    },
+    label() {
+      if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return 'Face ID';
+      if (/Macintosh/.test(ua)) return 'Touch ID';
+      if (/Android/.test(ua)) return 'huella';
+      if (/Windows/.test(ua)) return 'Windows Hello';
+      return 'huella o rostro';
+    },
+    deviceName() {
+      if (/iPhone/.test(ua)) return 'iPhone';
+      if (/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return 'iPad';
+      if (/Android/.test(ua)) return 'Android';
+      if (/Macintosh/.test(ua)) return 'Mac';
+      if (/Windows/.test(ua)) return 'Windows';
+      return 'Este dispositivo';
+    },
+    /** Activates the passkey on this device for the signed-in user. */
+    async register(name = passkeys.deviceName()) {
+      const o = clean(await api.post('/auth/passkeys/register/options'));
+      delete o.extensions; delete o.status; delete o.errorMessage;
+      const credential = await navigator.credentials.create({ publicKey: {
+        ...o,
+        challenge: b64u.toBuffer(o.challenge),
+        user: { ...o.user, id: b64u.toBuffer(o.user.id) },
+        excludeCredentials: (o.excludeCredentials || []).map(c => ({ ...c, id: b64u.toBuffer(c.id) })),
+      } });
+      return api.post('/auth/passkeys/register', { name, credential: {
+        id: credential.id, rawId: b64u.from(credential.rawId), type: credential.type, extensions: {},
+        response: { attestationObject: b64u.from(credential.response.attestationObject), clientDataJSON: b64u.from(credential.response.clientDataJSON) },
+      } });
+    },
+    /** Signs in with a passkey of this device; returns the same answer as a password sign-in. */
+    async login() {
+      const { requestId, options } = await api.post('/auth/passkeys/login/options');
+      const o = clean(options);
+      delete o.extensions; delete o.status; delete o.errorMessage;
+      const credential = await navigator.credentials.get({ publicKey: {
+        ...o,
+        challenge: b64u.toBuffer(o.challenge),
+        allowCredentials: (o.allowCredentials || []).map(c => ({ ...c, id: b64u.toBuffer(c.id) })),
+      } });
+      const r = credential.response;
+      return api.post('/auth/passkeys/login', { requestId, credential: {
+        id: credential.id, rawId: b64u.from(credential.rawId), type: credential.type, extensions: {},
+        response: { authenticatorData: b64u.from(r.authenticatorData), clientDataJSON: b64u.from(r.clientDataJSON),
+          signature: b64u.from(r.signature), userHandle: b64u.from(r.userHandle) },
+      } });
+    },
+    /** Plain words for the errors a person can cause: cancelling, or a device already set up. */
+    explain(err) {
+      if (err?.name === 'NotAllowedError' || err?.name === 'AbortError') return 'Se canceló o se agotó el tiempo. Intenta de nuevo.';
+      if (err?.name === 'InvalidStateError') return 'Este dispositivo ya tiene activado el acceso.';
+      if (err?.name === 'SecurityError') return 'Abre el sistema con su dirección web segura (https) para usar esta opción.';
+      return err?.message || 'No se pudo completar.';
+    },
+    /** "My devices" dialog: activate on this device, see and remove the others. */
+    async manage() {
+      const d = document.createElement('dialog');
+      d.style.width = 'min(480px, calc(100vw - 32px))';
+      d.innerHTML = `<form method="dialog">
+        <header><h2>Entrar con ${esc(passkeys.label())}</h2><button class="btn ghost icon-btn" value="cancel" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button></header>
+        <div class="body" style="display:grid;gap:12px">
+          <p class="muted" style="margin:0">Actívalo en tus dispositivos para entrar sin escribir la contraseña. Tu rostro o huella nunca salen del teléfono.</p>
+          <div id="pk-list" class="pk-list"></div>
+          <div class="form-error" id="pk-error" hidden></div>
+        </div>
+        <footer><button class="btn primary" type="button" id="pk-add"><i class="bi bi-fingerprint"></i>Activar en este ${esc(passkeys.deviceName() === 'Este dispositivo' ? 'dispositivo' : passkeys.deviceName())}</button></footer>
+      </form>`;
+      document.body.appendChild(d);
+      const list = d.querySelector('#pk-list'), error = d.querySelector('#pk-error');
+      const render = async () => {
+        const items = await api.get('/auth/passkeys');
+        list.innerHTML = items.length ? items.map(p => `<div class="pk-item"><i class="bi bi-phone"></i>
+            <div><b>${esc(p.name)}</b><small class="muted">Activado ${fmt.date(p.createdAt)}${p.lastUsedAt ? ` · último uso ${fmt.dateTime(p.lastUsedAt)}` : ''}</small></div>
+            <button class="btn ghost sm danger" type="button" data-pk-del="${p.id}">Quitar</button></div>`).join('')
+          : '<p class="muted" style="margin:0">Aún no lo tienes activado en ningún dispositivo.</p>';
+      };
+      d.querySelector('#pk-add').onclick = async () => {
+        error.hidden = true;
+        try { await passkeys.register(); toast(`Listo: ya puedes entrar con ${passkeys.label()}.`); await render(); }
+        catch (err) { error.textContent = passkeys.explain(err); error.hidden = false; }
+      };
+      list.addEventListener('click', async e => {
+        const b = e.target.closest('[data-pk-del]');
+        if (!b || !await confirmBox('Quitar el acceso de ese dispositivo. Ahí volverá a pedir la contraseña.', { okText: 'Quitar', danger: true })) return;
+        try { await api.del('/auth/passkeys/' + b.dataset.pkDel); await render(); } catch (err) { fail(err); }
+      });
+      d.addEventListener('close', () => d.remove());
+      try { await render(); } catch (err) { fail(err); }
+      d.showModal();
+    },
+  };
+
+  window.POS = { api, session, env, business, refreshAlerts, passkeys, canAdmin, fmt, esc, shade, toast, fail, $, $$, formData, fillForm, dialogForm, confirmBox, boot,
     refreshCashChip, refreshSyncChip, loadProfile, firstAllowedPage, ago };
 })();

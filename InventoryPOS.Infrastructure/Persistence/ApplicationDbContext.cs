@@ -34,6 +34,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<PromotionRecipient> PromotionRecipients => Set<PromotionRecipient>();
     public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
     public DbSet<StockAlert> StockAlerts => Set<StockAlert>();
+    public DbSet<UserPasskey> UserPasskeys => Set<UserPasskey>();
     public DbSet<PurchaseOrderItem> PurchaseOrderItems => Set<PurchaseOrderItem>();
     public DbSet<PurchaseOrderEvent> PurchaseOrderEvents => Set<PurchaseOrderEvent>();
 

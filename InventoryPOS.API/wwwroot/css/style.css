@@ -480,3 +480,11 @@ dialog.labels-dialog { width: min(1040px, calc(100vw - 32px)); }
 .rail .brand { display: block; padding: 10px 14px 18px; }
 .rail .brand .logo { max-width: 172px; margin-inline: auto; }
 @media (max-width: 900px) { .rail .brand { padding-right: 48px; } }
+
+/* ── Face ID / fingerprint devices ── */
+.pk-list { display: grid; gap: 8px; }
+.pk-item { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.pk-item > i { font-size: 1.2rem; color: var(--accent); }
+.pk-item > div { display: grid; min-width: 0; }
+.pk-item small { font-size: .78rem; }
+#passkey-btn i, #offer-yes i { font-size: 1.1rem; }

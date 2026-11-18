@@ -36,6 +36,17 @@ public class IdentityService(UserManager<AppUser> users, ApplicationDbContext db
         return new AuthResponseDto(token, expiresAt, await BuildProfileAsync(user, ct));
     }
 
+    public async Task<AuthResponseDto> SignInVerifiedAsync(string userId, CancellationToken ct = default)
+    {
+        var user = await users.FindByIdAsync(userId);
+        if (user == null || !user.IsActive) throw new DomainException("La cuenta no está activa.");
+        if (await users.IsLockedOutAsync(user))
+            throw new DomainException("La cuenta está bloqueada temporalmente por intentos fallidos; intenta más tarde.");
+        await users.ResetAccessFailedCountAsync(user);
+        var (token, expiresAt) = CreateToken(user);
+        return new AuthResponseDto(token, expiresAt, await BuildProfileAsync(user, ct));
+    }
+
     public async Task<bool> NeedsSetupAsync(CancellationToken ct = default) => !await users.Users.AnyAsync(ct);
 
     public async Task<AuthResponseDto> SetupFirstAdminAsync(FirstAdminDto dto, CancellationToken ct = default)

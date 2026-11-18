@@ -37,6 +37,18 @@ La pantalla de entrada muestra el nombre de la tienda (**Anna’s Beauty Supply*
 
 **La primera vez** que se abre una caja nueva aparece **Configura tu caja**: escribe el nombre de la tienda, tu nombre, un usuario y una contraseña (8 caracteres o más, con al menos un número). Esa persona queda como **administrador**.
 
+## Entrar con Face ID o huella
+
+En el **teléfono o en la computadora** puedes entrar a la web sin escribir la contraseña: con **Face ID o Touch ID** (iPhone, iPad, Mac), **huella** (Android) o **Windows Hello**. Cada persona lo activa en sus propios dispositivos:
+
+1. Entra a la web con tu usuario y contraseña.
+2. Aparece **Usa Face ID** (o la opción de tu dispositivo). Pulsa **Activar** y confirma con tu rostro o huella.
+3. La próxima vez, en la pantalla de entrada pulsa **Entrar con Face ID** y listo.
+
+Si pulsaste **Ahora no**, puedes activarlo después desde el menú, abajo junto a **Tema** y **Salir**, en el botón **Face ID** (o **huella**). Ahí también ves en qué dispositivos lo tienes activado y puedes **Quitar** uno, por ejemplo si cambias o pierdes el teléfono.
+
+> Tu rostro o huella **nunca salen del dispositivo**: el teléfono solo confirma al sistema que eres tú. La contraseña sigue funcionando siempre. Esta opción necesita que la web se abra con su dirección segura (**https://**); la caja de escritorio sigue entrando con contraseña.
+
 ## El menú
 
 ![Menú lateral con los módulos](shot:menu)

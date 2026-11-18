@@ -57,6 +57,8 @@ public static class DependencyInjection
         services.AddScoped<IFolioGenerator, FolioGenerator>();
         services.AddScoped<IReportQueries, ReportQueries>();
         services.AddScoped<IIdentityService, IdentityService>();
+        services.AddScoped<PasskeyService>();
+        services.AddMemoryCache();
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddSingleton<ITicketPrinter, EscPosTicketPrinter>();
         services.AddScoped<DbSeeder>();

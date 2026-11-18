@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-18T22:10:18.153Z",
+  "generatedAt": "2026-11-18T22:46:41.209Z",
   "manuals": [
     {
       "slug": "primeros-pasos",
@@ -8,7 +8,7 @@
       "icon": "bi-flag",
       "summary": "Qué es Anna’s Beauty Supply POS, cómo entrar, cómo se organiza el menú y qué hacer el primer día.",
       "file": "00-primeros-pasos.pdf",
-      "size": 404146
+      "size": 413269
     },
     {
       "slug": "punto-de-venta",
@@ -26,7 +26,7 @@
       "icon": "bi-cash-coin",
       "summary": "Abrir la caja con su fondo, registrar entradas y retiros de efectivo y hacer el corte al final del turno.",
       "file": "02-caja.pdf",
-      "size": 268100
+      "size": 268171
     },
     {
       "slug": "ventas",
@@ -35,7 +35,7 @@
       "icon": "bi-receipt-cutoff",
       "summary": "Consultar el historial de ventas, ver el detalle de un ticket, reimprimirlo, cancelarlo o facturarlo.",
       "file": "03-ventas.pdf",
-      "size": 344940
+      "size": 344835
     },
     {
       "slug": "facturacion",
@@ -44,7 +44,7 @@
       "icon": "bi-receipt",
       "summary": "Timbrar facturas CFDI 4.0 desde la caja, descargarlas, cancelarlas y configurar, pagar o cambiar el proveedor.",
       "file": "04-facturacion.pdf",
-      "size": 593872
+      "size": 593889
     },
     {
       "slug": "productos",
@@ -71,7 +71,7 @@
       "icon": "bi-cart-check",
       "summary": "Pedir a cada proveedor lo que hace falta con la lista sugerida por el sistema, enviarla por WhatsApp y rastrear el envío.",
       "file": "07-pedidos.pdf",
-      "size": 833682
+      "size": 833535
     },
     {
       "slug": "recepciones",
@@ -80,7 +80,7 @@
       "icon": "bi-truck",
       "summary": "Capturar la mercancía que llega del proveedor con su costo, lote y caducidad.",
       "file": "08-recepciones.pdf",
-      "size": 192818
+      "size": 192395
     },
     {
       "slug": "etiquetas-y-escaner",
@@ -89,7 +89,7 @@
       "icon": "bi-qr-code",
       "summary": "Imprimir etiquetas con QR o código de barras en hojas carta y cobrar escaneándolas.",
       "file": "09-etiquetas-y-escaner.pdf",
-      "size": 352051
+      "size": 352737
     },
     {
       "slug": "categorias-y-marcas",
@@ -125,7 +125,7 @@
       "icon": "bi-megaphone",
       "summary": "Crear una promoción con imagen y slogan, elegir a qué clientes enviarla y mandarla por WhatsApp.",
       "file": "13-promociones.pdf",
-      "size": 478381
+      "size": 478267
     },
     {
       "slug": "resumen-del-dia",
@@ -161,7 +161,7 @@
       "icon": "bi-journal-text",
       "summary": "Dónde encontrar, leer y descargar estos manuales desde el sistema.",
       "file": "17-documentacion.pdf",
-      "size": 287929
+      "size": 288031
     },
     {
       "slug": "completo",
@@ -170,7 +170,7 @@
       "icon": "bi-book",
       "summary": "Todos los manuales en un solo documento, con índice.",
       "file": "manual-completo.pdf",
-      "size": 5158295,
+      "size": 5164618,
       "complete": true
     }
   ]

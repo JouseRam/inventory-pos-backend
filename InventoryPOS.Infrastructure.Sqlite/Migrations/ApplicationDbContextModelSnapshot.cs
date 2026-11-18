@@ -1630,6 +1630,62 @@ namespace InventoryPOS.Infrastructure.Sqlite.Migrations
                     b.ToTable("UserModulePermissions", (string)null);
                 });
 
+            modelBuilder.Entity("InventoryPOS.Domain.Entities.UserPasskey", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("AaGuid")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("CredentialId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("BLOB");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("PublicKey")
+                        .IsRequired()
+                        .HasColumnType("BLOB");
+
+                    b.Property<long>("SignCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("Uid")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CredentialId")
+                        .IsUnique();
+
+                    b.HasIndex("Uid")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserPasskeys", (string)null);
+                });
+
             modelBuilder.Entity("InventoryPOS.Infrastructure.Identity.AppUser", b =>
                 {
                     b.Property<string>("Id")
@@ -2098,6 +2154,15 @@ namespace InventoryPOS.Infrastructure.Sqlite.Migrations
                 });
 
             modelBuilder.Entity("InventoryPOS.Domain.Entities.UserModulePermission", b =>
+                {
+                    b.HasOne("InventoryPOS.Infrastructure.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("InventoryPOS.Domain.Entities.UserPasskey", b =>
                 {
                     b.HasOne("InventoryPOS.Infrastructure.Identity.AppUser", null)
                         .WithMany()

@@ -1696,6 +1696,64 @@ namespace InventoryPOS.Infrastructure.Persistence.Migrations
                     b.ToTable("UserModulePermissions", (string)null);
                 });
 
+            modelBuilder.Entity("InventoryPOS.Domain.Entities.UserPasskey", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<Guid>("AaGuid")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("CredentialId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("varbinary(450)");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<byte[]>("PublicKey")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<long>("SignCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("Uid")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CredentialId")
+                        .IsUnique();
+
+                    b.HasIndex("Uid")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserPasskeys", (string)null);
+                });
+
             modelBuilder.Entity("InventoryPOS.Infrastructure.Identity.AppUser", b =>
                 {
                     b.Property<string>("Id")
@@ -2170,6 +2228,15 @@ namespace InventoryPOS.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("InventoryPOS.Domain.Entities.UserModulePermission", b =>
+                {
+                    b.HasOne("InventoryPOS.Infrastructure.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("InventoryPOS.Domain.Entities.UserPasskey", b =>
                 {
                     b.HasOne("InventoryPOS.Infrastructure.Identity.AppUser", null)
                         .WithMany()

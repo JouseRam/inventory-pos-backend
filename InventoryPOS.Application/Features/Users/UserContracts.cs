@@ -20,6 +20,8 @@ public record FirstAdminDto(string UserName, string FullName, string Password, s
 public interface IIdentityService
 {
     Task<AuthResponseDto> LoginAsync(LoginDto dto, CancellationToken ct = default);
+    /// <summary>Signs in a user already proven by another factor (a passkey: Face ID, fingerprint), with the same checks as a login.</summary>
+    Task<AuthResponseDto> SignInVerifiedAsync(string userId, CancellationToken ct = default);
     /// <summary>True while no user exists (a freshly installed register).</summary>
     Task<bool> NeedsSetupAsync(CancellationToken ct = default);
     /// <summary>Creates the first super admin and signs it in; refused once any user exists.</summary>

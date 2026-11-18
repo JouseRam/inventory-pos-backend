@@ -34,7 +34,19 @@
         <label class="field"><span>Contraseña</span><input id="password" name="password" type="password" autocomplete="current-password" required></label>
         <div class="form-error" id="login-error" role="alert" hidden></div>
         <button class="btn primary lg" type="submit" id="login-btn">Entrar</button>
+        <button class="btn lg" type="button" id="passkey-btn" hidden><i class="bi bi-fingerprint"></i><span>Entrar con Face ID</span></button>
         <p class="muted" style="margin:0;font-size:.85rem;text-align:center">¿Olvidaste tu contraseña? Pide al administrador que la restablezca.</p>
+      </form>
+      <!-- After a password sign-in on a phone or laptop with Face ID / fingerprint: offer it once for next time. -->
+      <form id="passkey-offer" hidden>
+        <div>
+          <div class="eyebrow login-eyebrow">Entra más rápido</div>
+          <h1 class="login-title" id="offer-title">Usa Face ID</h1>
+          <p class="muted" style="margin:6px 0 0">La próxima vez entra con <b id="offer-label">Face ID</b> en lugar de escribir tu contraseña. Tu rostro o huella nunca salen de este dispositivo.</p>
+        </div>
+        <div class="form-error" id="offer-error" role="alert" hidden></div>
+        <button class="btn primary lg" type="button" id="offer-yes"><i class="bi bi-fingerprint"></i><span>Activar</span></button>
+        <button class="btn ghost" type="button" id="offer-no">Ahora no</button>
       </form>
       <form id="setup-form" hidden autocomplete="off">
         <div>
@@ -55,7 +67,60 @@
   <script src="js/core.js"></script>
   <script>
     (function () {
-      const { api, session, $ } = POS;
+      const { api, session, $, passkeys } = POS;
+
+      function goIn() {
+        const next = new URLSearchParams(location.search).get('next');
+        location.href = next && /^[\w-]+\.html/.test(next) ? next : POS.firstAllowedPage();
+      }
+
+      // ── Face ID / fingerprint ──
+      const OFFERED_KEY = 'pos.passkey.offered';
+      const offered = () => { try { return JSON.parse(localStorage.getItem(OFFERED_KEY) || '[]'); } catch { return []; } };
+      const markOffered = user => { try { localStorage.setItem(OFFERED_KEY, JSON.stringify([...new Set([...offered(), user])])); } catch { /* private mode */ } };
+
+      passkeys.available().then(ok => {
+        if (!ok) return;
+        $('#passkey-btn span').textContent = `Entrar con ${passkeys.label()}`;
+        $('#passkey-btn').hidden = false;
+      });
+      $('#passkey-btn').addEventListener('click', async () => {
+        const btn = $('#passkey-btn'), error = $('#login-error');
+        btn.disabled = true; error.hidden = true;
+        try {
+          session.save(await passkeys.login());
+          goIn();
+        } catch (err) {
+          error.textContent = passkeys.explain(err);
+          error.hidden = false;
+        } finally { btn.disabled = false; }
+      });
+
+      /** Once per user on this device, right after the password: "use Face ID next time?". Resolves when answered. */
+      async function offerPasskey() {
+        const user = session.profile?.userName;
+        if (!user || offered().includes(user) || !await passkeys.available()) return;
+        markOffered(user);
+        const label = passkeys.label();
+        $('#offer-title').textContent = `Usa ${label}`;
+        $('#offer-label').textContent = label;
+        $('#offer-yes span').textContent = `Activar ${label}`;
+        $('#login-form').hidden = true;
+        $('#passkey-offer').hidden = false;
+        $('#offer-yes').focus();
+        await new Promise(resolve => {
+          $('#offer-no').onclick = resolve;
+          $('#offer-yes').onclick = async () => {
+            $('#offer-yes').disabled = true; $('#offer-error').hidden = true;
+            try { await passkeys.register(); resolve(); }
+            catch (err) {
+              if (err?.name === 'InvalidStateError') { resolve(); return; } // already active on this device
+              $('#offer-error').textContent = passkeys.explain(err);
+              $('#offer-error').hidden = false;
+            } finally { $('#offer-yes').disabled = false; }
+          };
+        });
+      }
 
       if (session.token) { location.href = session.profile ? POS.firstAllowedPage() : 'dashboard.html'; return; }
 
@@ -100,8 +165,8 @@
         try {
           const auth = await api.post('/auth/login', { userName: $('#userName').value.trim(), password: $('#password').value });
           session.save(auth);
-          const next = new URLSearchParams(location.search).get('next');
-          location.href = next && /^[\w-]+\.html/.test(next) ? next : POS.firstAllowedPage();
+          await offerPasskey();
+          goIn();
         } catch (err) {
           error.textContent = err.message;
           error.hidden = false;
