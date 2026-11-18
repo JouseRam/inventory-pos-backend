@@ -112,12 +112,29 @@ a { color: var(--accent); }
 }
 /* Grid children may shrink below their content: wide tables scroll inside their panel instead of widening the page. */
 .page > * { min-width: 0; }
-.menu-btn { display: none; }
+/* Phone-only controls. Stronger selectors than .btn (declared later), which would otherwise show them on a desktop too. */
+.topbar .menu-btn, .rail .rail-close, .nav-scrim { display: none; }
+@media (max-width: 900px) {
+  .topbar .menu-btn, .rail .rail-close { display: inline-flex; }
+  .nav-scrim { display: block; }
+}
+@media (prefers-reduced-motion: reduce) { .rail, .nav-scrim { transition: none; } }
 
 @media (max-width: 900px) {
   .shell { grid-template-columns: minmax(0, 1fr); }
-  .rail { position: fixed; inset: 0 auto 0 0; width: min(280px, 85vw); z-index: 20; transform: translateX(-100%); transition: transform .2s; box-shadow: var(--shadow); }
-  .shell.nav-open .rail { transform: none; }
+  /* A drawer as tall as the visible screen: on phones 100vh also counts the area behind the browser bars, which hid the bottom
+     of the menu (Tema / Salir). Safe-area padding keeps the brand and the footer clear of the notch and the home bar. */
+  .rail {
+    position: fixed; inset: 0 auto 0 0; height: 100vh; height: 100dvh; width: min(280px, 85vw); z-index: 30;
+    transform: translateX(-100%); transition: transform .2s; box-shadow: var(--shadow); overscroll-behavior: contain;
+    padding-top: max(16px, env(safe-area-inset-top, 0px)); padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+    visibility: hidden;
+  }
+  .shell.nav-open .rail { transform: none; visibility: visible; }
+  .nav-scrim { position: fixed; inset: 0; z-index: 25; background: rgb(20 12 18 / .45); opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .shell.nav-open .nav-scrim { opacity: 1; pointer-events: auto; }
+  .rail-close { display: inline-flex; position: absolute; top: max(12px, env(safe-area-inset-top, 0px)); right: 8px; }
+  .rail .brand { padding-right: 44px; }
   .menu-btn { display: inline-flex; }
   .topbar, .page { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 }

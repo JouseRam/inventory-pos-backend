@@ -340,7 +340,9 @@
     const shell = document.createElement('div');
     shell.className = 'shell';
     shell.innerHTML = `
-      <aside class="rail" id="rail">
+      <div class="nav-scrim" id="nav-scrim" aria-hidden="true"></div>
+      <aside class="rail" id="rail" aria-label="Menú">
+        <button class="btn ghost icon-btn rail-close" id="rail-close" type="button" aria-label="Cerrar menú"><i class="bi bi-x-lg"></i></button>
         <a class="brand" href="${firstAllowedPage()}"><b id="brand-name">${esc(business.name)}</b><span>POS</span></a>
         ${nav}
         <div class="rail-foot">
@@ -373,8 +375,24 @@
 
     shell.querySelector('#theme-btn').onclick = toggleTheme;
     shell.querySelector('#logout-btn').onclick = () => session.logout();
-    shell.querySelector('#menu-btn').onclick = () => shell.classList.toggle('nav-open');
-    page.addEventListener('click', () => shell.classList.remove('nav-open'));
+    // Phone drawer: opens from the menu button; the dimmed backdrop, the X, Escape or choosing a page close it.
+    const menuBtn = shell.querySelector('#menu-btn');
+    const setNav = open => {
+      shell.classList.toggle('nav-open', open);
+      menuBtn.setAttribute('aria-expanded', String(open));
+      document.documentElement.style.overflow = open ? 'hidden' : '';
+      if (open) shell.querySelector('#rail-close').focus();
+    };
+    menuBtn.setAttribute('aria-controls', 'rail');
+    menuBtn.setAttribute('aria-expanded', 'false');
+    menuBtn.onclick = () => setNav(!shell.classList.contains('nav-open'));
+    shell.querySelector('#rail-close').onclick = () => { setNav(false); menuBtn.focus(); };
+    shell.querySelector('#nav-scrim').onclick = () => setNav(false);
+    shell.querySelectorAll('.rail .nav a').forEach(a => a.addEventListener('click', () => setNav(false)));
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && shell.classList.contains('nav-open')) { setNav(false); menuBtn.focus(); }
+    });
+    page.addEventListener('click', () => setNav(false));
   }
 
   // ── Stock alerts for the administrator: bell in the top bar and a desktop notice when something reaches its minimum ──
