@@ -90,4 +90,10 @@ dotnet run --project InventoryPOS.LicenseTool -- activar --codigo XXXX-XXXX-XXXX
 Opcional: `--vence AAAA-MM-DD` para una licencia con fecha de vencimiento. Manda la clave (texto o archivo) al cliente;
 la pega o carga en la pantalla de activación. La clave queda en `%LOCALAPPDATA%\MatizPOS\licencia.key`.
 
+La llave pública ya está en `LicensePublicKey.cs`; la privada la guarda el distribuidor fuera del repositorio.
+
+Para compilar la caja sin Windows (Linux o macOS): `bash build/desktop-linux/publish.sh` genera la carpeta lista para
+copiar a la computadora (mismo código, con Windows Forms tomado de sus paquetes de NuGet). En Windows usa
+`build/publish-desktop.ps1`.
+
 Al depurar desde Visual Studio (Debug) no se pide activación; para probarla define la variable `MATIZPOS_LICENSE=1`.

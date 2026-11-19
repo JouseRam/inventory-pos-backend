@@ -7,5 +7,6 @@ namespace InventoryPOS.Desktop;
 /// </summary>
 internal static class LicensePublicKey
 {
-    public const string Value = "";
+    public const string Value =
+        "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvSUBYgLF5btq8TCTuuzqxHV4LrkPwZ/QVOhQduCuEBkuNkNAw4BgHqbIOo03Gvm+RC+AVo7TW1Gkkqc1HcReyA==";
 }

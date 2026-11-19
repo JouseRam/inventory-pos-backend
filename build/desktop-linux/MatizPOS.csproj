@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Linux build of InventoryPOS.Desktop: same sources; WinForms through the framework reference instead of the Windows-only SDK. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>MatizPOS</AssemblyName>
+    <RootNamespace>InventoryPOS.Desktop</RootNamespace>
+    <Product>Anna’s Beauty Supply POS</Product>
+    <Version>1.0.0</Version>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <ApplicationIcon>../../InventoryPOS.Desktop/app.ico</ApplicationIcon>
+    <NoWarn>CA1416;NU1701</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
+    <ProjectReference Include="../../InventoryPOS.API/InventoryPOS.API.csproj" />
+    <ProjectReference Include="../../InventoryPOS.Licensing/InventoryPOS.Licensing.csproj" />
+    <Compile Include="../../InventoryPOS.Desktop/*.cs" />
+    <Using Include="System.Windows.Forms" />
+    <Using Include="System.Drawing" />
+    <Using Include="System.IO" />
+    <Content Include="../../InventoryPOS.API/wwwroot/**/*" Link="wwwroot/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../InventoryPOS.Desktop/desktopsettings.json" Link="desktopsettings.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../InventoryPOS.Desktop/app.ico" Link="app.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
