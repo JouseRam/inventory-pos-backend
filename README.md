@@ -92,6 +92,9 @@ la pega o carga en la pantalla de activación. La clave queda en `%LOCALAPPDATA%
 
 La llave pública ya está en `LicensePublicKey.cs`; la privada la guarda el distribuidor fuera del repositorio.
 
+Para el instalador de un solo archivo (accesos directos con el icono, desinstalador, sin permisos de administrador):
+`bash build/installer/build.sh` genera `artifacts/Instalar-AnnasBeautySupply.exe` (requiere NSIS: `apt install nsis`).
+
 Para compilar la caja sin Windows (Linux o macOS): `bash build/desktop-linux/publish.sh` genera la carpeta lista para
 copiar a la computadora (mismo código, con Windows Forms tomado de sus paquetes de NuGet). En Windows usa
 `build/publish-desktop.ps1`.
